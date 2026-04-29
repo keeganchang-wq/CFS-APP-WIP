@@ -55,7 +55,8 @@ export default function App() {
   const [term, setTerm] = useState("60");
   const [balloon, setBalloon] = useState("65000");
   const [targetMonthly, setTargetMonthly] = useState("1500");
-  const [targetAdjust, setTargetAdjust] = useState("balloon");
+  const [targetPreference, setTargetPreference] = useState("auto");
+  const [targetLock, setTargetLock] = useState("none");
 
   const lender = lenders[lenderKey];
 
@@ -83,7 +84,16 @@ export default function App() {
     return flags;
   }, [calc]);
 
-  function estimateMonthly({ price = num(purchasePrice), dep = num(deposit), tr = num(trade), pay = num(payout), months = num(term), balloonAmt = num(balloon), ratePA = num(rate) }) {
+  
+  function estimateMonthly({
+    price = num(purchasePrice),
+    dep = num(deposit),
+    tr = num(trade),
+    pay = num(payout),
+    months = num(term),
+    balloonAmt = num(balloon),
+    ratePA = num(rate)
+  }) {
     const fees = num(lender.originationFee) + num(lender.establishmentFee) + num(lender.ppsr);
     const equity = dep + tr - pay;
     const subtotal = Math.max(price - equity, 0);
@@ -91,65 +101,148 @@ export default function App() {
     return pmt({ amount: naf, ratePA, months, balloon: balloonAmt }) + num(lender.monthlyAccountFee);
   }
 
-  function solveTargetRepayment() {
+  function solveBinary(field, low, high, target) {
+    let best = low;
+    let bestMonthly = estimateMonthly({ [field]: low });
+
+    for (let i = 0; i < 70; i++) {
+      const mid = (low + high) / 2;
+      const monthly = estimateMonthly({ [field]: mid });
+
+      if (Math.abs(monthly - target) < Math.abs(bestMonthly - target)) {
+        best = mid;
+        bestMonthly = monthly;
+      }
+
+      // Balloon and deposit reduce repayment when increased.
+      if (field === "balloonAmt" || field === "dep") {
+        if (monthly > target) low = mid;
+        else high = mid;
+      }
+
+      // Purchase price and rate increase repayment when increased.
+      if (field === "price" || field === "ratePA") {
+        if (monthly > target) high = mid;
+        else low = mid;
+      }
+    }
+
+    return { value: best, monthly: bestMonthly };
+  }
+
+  const targetScenarios = useMemo(() => {
     const target = num(targetMonthly);
-    if (!target || target <= 0) return;
+    if (!target || target <= 0) return [];
 
     const price = num(purchasePrice);
     const currentDeposit = num(deposit);
-    const currentTrade = num(trade);
-    const currentPayout = num(payout);
-    const currentTerm = num(term);
     const currentBalloon = num(balloon);
+    const currentRate = num(rate);
+    const currentTerm = num(term);
 
-    if (targetAdjust === "balloon") {
-      let low = 0;
-      let high = Math.max(price * 0.8, currentBalloon, 1);
-      for (let i = 0; i < 60; i++) {
-        const mid = (low + high) / 2;
-        const m = estimateMonthly({ balloonAmt: mid });
-        if (m > target) low = mid;
-        else high = mid;
-      }
-      setBalloon(String(Math.round(high)));
-      return;
+    const options = [];
+
+    if (targetLock !== "balloon") {
+      const solved = solveBinary("balloonAmt", 0, Math.max(price * 0.8, currentBalloon, 1), target);
+      options.push({
+        key: "balloon",
+        label: "Balloon required",
+        value: money(Math.round(solved.value)),
+        monthly: solved.monthly,
+        apply: () => setBalloon(String(Math.round(solved.value)))
+      });
     }
 
-    if (targetAdjust === "deposit") {
-      let low = currentDeposit;
-      let high = Math.max(price, currentDeposit + 1);
-      for (let i = 0; i < 60; i++) {
-        const mid = (low + high) / 2;
-        const m = estimateMonthly({ dep: mid });
-        if (m > target) low = mid;
-        else high = mid;
-      }
-      setDeposit(String(Math.round(high)));
-      return;
+    if (targetLock !== "deposit") {
+      const solved = solveBinary("dep", currentDeposit, Math.max(price, currentDeposit + 1), target);
+      options.push({
+        key: "deposit",
+        label: "Deposit required",
+        value: money(Math.round(solved.value)),
+        monthly: solved.monthly,
+        apply: () => setDeposit(String(Math.round(solved.value)))
+      });
     }
 
-    if (targetAdjust === "term") {
+    if (targetLock !== "term") {
       let bestTerm = currentTerm;
-      let bestDiff = Infinity;
+      let bestMonthly = estimateMonthly({ months: currentTerm });
+      let bestDiff = Math.abs(bestMonthly - target);
+
       for (let mths = 12; mths <= 84; mths += 12) {
-        const m = estimateMonthly({ months: mths });
-        const diff = Math.abs(m - target);
+        const monthly = estimateMonthly({ months: mths });
+        const diff = Math.abs(monthly - target);
         if (diff < bestDiff) {
           bestDiff = diff;
           bestTerm = mths;
+          bestMonthly = monthly;
         }
       }
-      setTerm(String(bestTerm));
-      return;
+
+      options.push({
+        key: "term",
+        label: "Term required",
+        value: `${bestTerm} months`,
+        monthly: bestMonthly,
+        apply: () => setTerm(String(bestTerm))
+      });
     }
+
+    if (targetLock !== "rate") {
+      const solved = solveBinary("ratePA", 0.01, Math.max(currentRate * 2, 30), target);
+      options.push({
+        key: "rate",
+        label: "Interest rate required",
+        value: `${Math.max(0, solved.value).toFixed(2)}%`,
+        monthly: solved.monthly,
+        apply: () => setRate(String(Math.max(0, solved.value).toFixed(2)))
+      });
+    }
+
+    if (targetLock !== "purchase") {
+      const solved = solveBinary("price", 1000, Math.max(price, 1000), target);
+      options.push({
+        key: "purchase",
+        label: "Purchase price required",
+        value: money(Math.round(solved.value)),
+        monthly: solved.monthly,
+        apply: () => setPurchasePrice(String(Math.round(solved.value)))
+      });
+    }
+
+    return options.map(option => ({
+      ...option,
+      difference: option.monthly - target,
+      status: Math.abs(option.monthly - target) < 5
+        ? "Close"
+        : option.monthly > target
+          ? "Above target"
+          : "Below target"
+    }));
+  }, [targetMonthly, targetLock, purchasePrice, deposit, trade, payout, term, balloon, rate, lender]);
+
+  function applyPreferredTargetScenario() {
+    if (!targetScenarios.length) return;
+
+    const preferred = targetPreference === "auto"
+      ? targetScenarios
+      : targetScenarios.filter(option => option.key === targetPreference);
+
+    const chosen = (preferred.length ? preferred : targetScenarios)
+      .slice()
+      .sort((a, b) => Math.abs(a.difference) - Math.abs(b.difference))[0];
+
+    chosen?.apply();
   }
 
   const targetPreview = useMemo(() => {
     const target = num(targetMonthly);
-    if (!target) return "Enter a target repayment";
-    const diff = calc.monthly - target;
-    if (Math.abs(diff) < 1) return "Current structure is close to target";
-    return diff > 0 ? `${money(diff)} above target` : `${money(Math.abs(diff))} below target`;
+    if (!target) return "Enter a target repayment to view options.";
+    const difference = calc.monthly - target;
+    if (Math.abs(difference) < 1) return "Current repayment is already close to target.";
+    return difference > 0
+      ? `${money(difference)} above target`
+      : `${money(Math.abs(difference))} below target`;
   }, [targetMonthly, calc.monthly]);
 
 
@@ -299,10 +392,7 @@ function DesktopApp(props) {
                 <MiniRows rows={[["Balloon %", `${calc.balloonPct.toFixed(2)}%`], ["Total Payable", money(calc.total)], ["Interest Component", money(calc.interest)]]}/>
               </>}
             </Panel>
-            <Panel title="Target Repayment Mode" icon={<Wrench />}>
-              <TargetRepaymentPanel {...props} />
-              <div className="rules compact-rules">{ruleFlags.map((r, i) => <p key={i}>{r}</p>)}</div>
-            </Panel>
+            <Panel title="Target Repayment Mode" icon={<Wrench />}><TargetRepaymentPanel {...props} /><div className="rules compact-rules">{ruleFlags.map((r, i) => <p key={i}>{r}</p>)}</div></Panel>
           </div>
         </section>
       </main>
@@ -324,20 +414,67 @@ function Sheets(props) {
 }
 
 
-function TargetRepaymentPanel({ targetMonthly, setTargetMonthly, targetAdjust, setTargetAdjust, solveTargetRepayment, targetPreview }) {
+function TargetRepaymentPanel({
+  targetMonthly,
+  setTargetMonthly,
+  targetPreference,
+  setTargetPreference,
+  targetLock,
+  setTargetLock,
+  targetScenarios,
+  applyPreferredTargetScenario,
+  targetPreview
+}) {
   return (
     <div className="target-panel">
-      <Field label="Target Monthly" value={targetMonthly} setValue={setTargetMonthly} prefix="$" />
-      <label className="target-select">
-        <span>Adjust</span>
-        <select value={targetAdjust} onChange={(e) => setTargetAdjust(e.target.value)}>
-          <option value="balloon">Balloon</option>
-          <option value="deposit">Deposit</option>
-          <option value="term">Term</option>
-        </select>
-      </label>
-      <button className="target-button" onClick={solveTargetRepayment}>Apply Target</button>
+      <div className="target-top-grid">
+        <Field label="Target Monthly" value={targetMonthly} setValue={setTargetMonthly} prefix="$" />
+
+        <label className="target-select">
+          <span>Lock</span>
+          <select value={targetLock} onChange={(e) => setTargetLock(e.target.value)}>
+            <option value="none">Nothing locked</option>
+            <option value="purchase">Purchase price</option>
+            <option value="rate">Interest rate</option>
+            <option value="balloon">Balloon amount</option>
+            <option value="term">Term</option>
+            <option value="deposit">Deposit</option>
+          </select>
+        </label>
+
+        <label className="target-select">
+          <span>Apply Preference</span>
+          <select value={targetPreference} onChange={(e) => setTargetPreference(e.target.value)}>
+            <option value="auto">Best fit</option>
+            <option value="purchase">Purchase price</option>
+            <option value="rate">Interest rate</option>
+            <option value="balloon">Balloon amount</option>
+            <option value="term">Term</option>
+            <option value="deposit">Deposit</option>
+          </select>
+        </label>
+      </div>
+
       <p className="target-preview">{targetPreview}</p>
+
+      <div className="target-results">
+        {targetScenarios.length ? targetScenarios.map((scenario) => (
+          <div className="target-result" key={scenario.key}>
+            <div>
+              <span>{scenario.label}</span>
+              <b>{scenario.value}</b>
+              <small>{scenario.status}: {money(Math.abs(scenario.difference))}</small>
+            </div>
+            <button onClick={scenario.apply}>Apply</button>
+          </div>
+        )) : (
+          <p className="target-preview">Enter a target monthly repayment.</p>
+        )}
+      </div>
+
+      <button className="target-button" onClick={applyPreferredTargetScenario}>
+        Apply Preferred Option
+      </button>
     </div>
   );
 }

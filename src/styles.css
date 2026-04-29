@@ -167,11 +167,18 @@
 }
 
 
-/* Target repayment mode */
+/* Target Repayment Solver */
 .target-panel {
   display: grid;
   gap: 10px;
 }
+
+.target-top-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
 .target-select span {
   display: block;
   margin-bottom: 5px;
@@ -181,6 +188,7 @@
   text-transform: uppercase;
   font-weight: 900;
 }
+
 .target-select select {
   width: 100%;
   border: 1px solid rgba(65,191,40,.36);
@@ -192,22 +200,12 @@
   font-weight: 900;
   outline: none;
 }
+
 .target-select option {
   background: #101010;
   color: white;
 }
-.target-button {
-  width: 100%;
-  border: 1px solid rgba(65,191,40,.45);
-  background: rgba(65,191,40,.16);
-  color: #41bf28;
-  border-radius: 9px;
-  padding: 12px 14px;
-  font-size: 13px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-}
+
 .target-preview {
   margin: 0;
   border: 1px solid rgba(255,255,255,.12);
@@ -217,6 +215,71 @@
   color: rgba(255,255,255,.72);
   font-size: 13px;
 }
+
+.target-results {
+  display: grid;
+  gap: 8px;
+}
+
+.target-result {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.045);
+  border-radius: 9px;
+  padding: 11px;
+}
+
+.target-result span {
+  display: block;
+  color: rgba(255,255,255,.55);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.target-result b {
+  display: block;
+  margin-top: 4px;
+  font-size: 17px;
+  color: #fff;
+}
+
+.target-result small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255,255,255,.50);
+  font-size: 12px;
+}
+
+.target-result button,
+.target-button {
+  border: 1px solid rgba(65,191,40,.38);
+  background: rgba(65,191,40,.12);
+  color: #41bf28;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.target-button {
+  width: 100%;
+  border-radius: 9px;
+  padding: 12px 14px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
 .compact-rules {
   margin-top: 12px;
+}
+
+@media (min-width: 1000px) {
+  .desktop-shell .target-top-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
 }
