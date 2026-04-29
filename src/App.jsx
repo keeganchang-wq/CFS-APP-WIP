@@ -392,7 +392,20 @@ function DesktopApp(props) {
                 <MiniRows rows={[["Balloon %", `${calc.balloonPct.toFixed(2)}%`], ["Total Payable", money(calc.total)], ["Interest Component", money(calc.interest)]]}/>
               </>}
             </Panel>
-            <Panel title="Target Repayment Mode" icon={<Wrench />}><TargetRepaymentPanel {...props} /><div className="rules compact-rules">{ruleFlags.map((r, i) => <p key={i}>{r}</p>)}</div></Panel>
+            <Panel title="Target Repayment Mode" icon={<Wrench />}>
+              <TargetRepaymentPanel
+                targetMonthly={targetMonthly}
+                setTargetMonthly={setTargetMonthly}
+                targetPreference={targetPreference}
+                setTargetPreference={setTargetPreference}
+                targetLock={targetLock}
+                setTargetLock={setTargetLock}
+                targetScenarios={targetScenarios}
+                applyPreferredTargetScenario={applyPreferredTargetScenario}
+                targetPreview={targetPreview}
+              />
+              <div className="rules compact-rules">{ruleFlags.map((r, i) => <p key={i}>{r}</p>)}</div>
+            </Panel>
           </div>
         </section>
       </main>
