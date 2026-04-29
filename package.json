@@ -1,7 +1,7 @@
 {
-  "name": "cavalo-responsive-mobile-desktop",
+  "name": "cavalo-clean-working-target",
   "private": true,
-  "version": "3.0.0",
+  "version": "4.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
