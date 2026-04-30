@@ -29,6 +29,23 @@ const LENDERS = {
   NFS: { name: "NFS", originationFee: 1490, establishmentFee: 490, ppsr: 6, monthlyAccountFee: 11 }
 };
 
+
+const VWFS_VEHICLE_TYPES = {
+  all: "All vehicles",
+  branded: "VWFS branded",
+  whiteLabel: "White label",
+  other: "Other / non policy"
+};
+
+const VWFS_POLICY_TIERS = [
+  { key:"waiverUnder120", label:"Waiver of Financials <$120k", min:0, max:120000, req:{ assetBacked:true, abnYears:2, creditFileYears:2, vehicle:"all", channel:"both", maxLvr:null } },
+  { key:"waiverUnder130", label:"Waiver of Financials <$130k", min:0, max:130000, req:{ assetBacked:true, abnYears:2, creditFileYears:2, vehicle:"brandedOrWhiteLabel", channel:"both", maxLvr:null } },
+  { key:"waiver130to200", label:"Waiver of Financials >$130k - <$200k", min:130000, max:200000, req:{ assetBacked:true, abnYears:2, gstYears:2, creditFileYears:2, creditRating:"good", vehicle:"all", channel:"both", maxLvr:100 } },
+  { key:"waiver200to300", label:"Waiver of Financials >$200k - <$300k", min:200000, max:300000, req:{ assetBacked:true, abnYears:2, gstYears:2, creditFileYears:2, creditRating:"good", vehicle:"brandedOrWhiteLabel", channel:"posOnly", maxLvr:100, repaymentIncreaseCap:40 } },
+  { key:"replacement200to300", label:"Replacement Policy >$200k - <$300k", min:200000, max:300000, replacementOnly:true, req:{ abnYears:2, gstYears:2, creditFileYears:2, creditRating:"good", vehicle:"brandedOrWhiteLabel", channel:"posOnly", maxLvr:100, repaymentIncreaseCap:40 } },
+  { key:"startupUnder100", label:"Start Up Business Policy <$100k", min:0, max:100000, startupOnly:true, req:{ depositPercent:20, creditFileYears:2, vehicle:"all", channel:"both", gstRegistered:true } }
+];
+
 const LOCK_LABELS = {
   purchase: "Purchase price",
   rate: "Interest rate",
@@ -86,6 +103,19 @@ export default function App() {
   const [clientPhone, setClientPhone] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [stockRef, setStockRef] = useState("");
+
+  const [vwfsEntityType, setVwfsEntityType] = useState("company");
+  const [vwfsLoanPurpose, setVwfsLoanPurpose] = useState("commercial");
+  const [vwfsAbnYears, setVwfsAbnYears] = useState("2");
+  const [vwfsGstYears, setVwfsGstYears] = useState("2");
+  const [vwfsAssetBacked, setVwfsAssetBacked] = useState("yes");
+  const [vwfsCreditRating, setVwfsCreditRating] = useState("good");
+  const [vwfsCreditFileYears, setVwfsCreditFileYears] = useState("2");
+  const [vwfsVehicleType, setVwfsVehicleType] = useState("branded");
+  const [vwfsDealerChannel, setVwfsDealerChannel] = useState("pos");
+  const [vwfsReplacementDeal, setVwfsReplacementDeal] = useState("no");
+  const [vwfsRepaymentIncrease, setVwfsRepaymentIncrease] = useState("0");
+  const [vwfsStartupBusiness, setVwfsStartupBusiness] = useState("no");
 
   const [purchasePrice, setPurchasePrice] = useState("132940");
   const [deposit, setDeposit] = useState("0");
@@ -389,6 +419,83 @@ export default function App() {
     }));
   }
 
+
+  function evaluateVwfsTier(tier) {
+    const req = tier.req;
+    const checks = [];
+    const amount = calc.amountFinanced;
+    const depositPercent = calc.price ? (calc.cashDeposit / calc.price) * 100 : 0;
+    const brandedOrWhite = ["branded", "whiteLabel"].includes(vwfsVehicleType);
+    const add = (label, pass, detail) => checks.push({ label, pass, detail });
+
+    add("Loan amount band", amount >= tier.min && amount < tier.max, `${money(amount)} vs ${tier.label}`);
+
+    if (tier.replacementOnly) add("Replacement deal", vwfsReplacementDeal === "yes", "Replacement policy applies only to replacement deals.");
+    if (tier.startupOnly) add("Start up business", vwfsStartupBusiness === "yes", "Start up policy applies only to start up business applications.");
+
+    if (req.assetBacked) add("Asset backed", vwfsAssetBacked === "yes", vwfsAssetBacked === "yes" ? "Real property ownership confirmed." : "Applicant is not asset backed.");
+    if (req.abnYears) add("ABN established", cleanNumber(vwfsAbnYears) > req.abnYears, `ABN age ${vwfsAbnYears || 0} years. Required > ${req.abnYears}.`);
+    if (req.gstYears) add("GST registration", cleanNumber(vwfsGstYears) > req.gstYears, `GST age ${vwfsGstYears || 0} years. Required > ${req.gstYears}.`);
+    if (req.gstRegistered) add("GST registered", cleanNumber(vwfsGstYears) > 0, "New/start up entities must be GST registered.");
+    if (req.creditFileYears) add("Clear credit file", cleanNumber(vwfsCreditFileYears) > req.creditFileYears && vwfsCreditRating !== "poor", `Credit file ${vwfsCreditFileYears || 0} years, rating ${vwfsCreditRating}.`);
+    if (req.creditRating === "good") add("Good / A-rated credit", vwfsCreditRating === "good", "Higher exposure waiver tiers require strong credit.");
+    if (req.vehicle === "brandedOrWhiteLabel") add("Vehicle type", brandedOrWhite, "This tier is branded / white label only.");
+    if (req.vehicle === "all") add("Vehicle type", vwfsVehicleType !== "other", "This tier allows all vehicles, subject to normal policy.");
+    if (req.channel === "posOnly") add("Dealer channel", vwfsDealerChannel === "pos", "This tier is POS dealers only.");
+    if (req.depositPercent) add("Minimum deposit", depositPercent >= req.depositPercent, `Deposit ${depositPercent.toFixed(2)}%. Required ${req.depositPercent}%.`);
+    if (req.maxLvr) add("Max LVR", calc.lvr <= req.maxLvr, `LVR ${calc.lvr.toFixed(2)}%. Required <= ${req.maxLvr}%.`);
+    if (req.repaymentIncreaseCap && vwfsReplacementDeal === "yes") add("Repayment increase", cleanNumber(vwfsRepaymentIncrease) <= req.repaymentIncreaseCap, `Increase ${vwfsRepaymentIncrease || 0}%. Required <= ${req.repaymentIncreaseCap}%.`);
+
+    const failed = checks.filter(c => !c.pass);
+    return {
+      ...tier,
+      checks,
+      failed,
+      score: checks.length - failed.length,
+      status: failed.length === 0 ? "Eligible" : failed.length <= 2 ? "Conditional" : "Not Eligible"
+    };
+  }
+
+  const vwfsSecondBrain = useMemo(() => {
+    const tierResults = VWFS_POLICY_TIERS.map((tier) => evaluateVwfsTier(tier));
+    const eligible = tierResults.filter((tier) => tier.status === "Eligible");
+    const conditional = tierResults.filter((tier) => tier.status === "Conditional");
+    const bestTier = eligible[0] || conditional.sort((a,b)=>b.score-a.score)[0] || tierResults.sort((a,b)=>b.score-a.score)[0];
+
+    const strengths = [];
+    const risks = [];
+    const recommendations = [];
+
+    if (vwfsAssetBacked === "yes") strengths.push("Asset backed applicant.");
+    else risks.push("Not asset backed.");
+    if (cleanNumber(vwfsAbnYears) > 2) strengths.push("ABN established for more than 2 years.");
+    else risks.push("ABN history may restrict waiver eligibility.");
+    if (cleanNumber(vwfsGstYears) > 2) strengths.push("GST registered for more than 2 years.");
+    else risks.push("GST history may restrict higher exposure tiers.");
+    if (vwfsCreditRating === "good") strengths.push("Credit profile marked Good.");
+    if (vwfsCreditRating === "average") risks.push("Average credit may require stronger compensating factors.");
+    if (vwfsCreditRating === "poor") risks.push("Poor credit is unlikely to fit waiver policy.");
+
+    if (calc.lvr > 100) recommendations.push(`Reduce LVR to 100% or below. Current LVR is ${calc.lvr.toFixed(2)}%.`);
+    if (calc.balloonPercent > 60) recommendations.push(`Review balloon. Current balloon is ${calc.balloonPercent.toFixed(2)}%.`);
+    if (bestTier?.failed?.length) bestTier.failed.slice(0,3).forEach(item => recommendations.push(item.detail));
+    if (!recommendations.length) recommendations.push("Application appears to fit the selected VWFS waiver pathway. Prepare submission notes around strengths.");
+
+    return {
+      decision: eligible.length ? "Eligible" : conditional.length ? "Conditional" : "Not Eligible",
+      bestTier,
+      tierResults,
+      strengths,
+      risks,
+      recommendations
+    };
+  }, [
+    calc, vwfsEntityType, vwfsLoanPurpose, vwfsAbnYears, vwfsGstYears, vwfsAssetBacked,
+    vwfsCreditRating, vwfsCreditFileYears, vwfsVehicleType, vwfsDealerChannel,
+    vwfsReplacementDeal, vwfsRepaymentIncrease, vwfsStartupBusiness
+  ]);
+
+
   const quoteText = `Cavalo Prestige Finance Estimate
 Client: ${clientName || "Client"}
 Vehicle: ${vehicle || "Vehicle"}
@@ -547,6 +654,19 @@ Estimate only. Subject to approval.`;
     setVehicle,
     stockRef,
     setStockRef,
+    vwfsEntityType, setVwfsEntityType,
+    vwfsLoanPurpose, setVwfsLoanPurpose,
+    vwfsAbnYears, setVwfsAbnYears,
+    vwfsGstYears, setVwfsGstYears,
+    vwfsAssetBacked, setVwfsAssetBacked,
+    vwfsCreditRating, setVwfsCreditRating,
+    vwfsCreditFileYears, setVwfsCreditFileYears,
+    vwfsVehicleType, setVwfsVehicleType,
+    vwfsDealerChannel, setVwfsDealerChannel,
+    vwfsReplacementDeal, setVwfsReplacementDeal,
+    vwfsRepaymentIncrease, setVwfsRepaymentIncrease,
+    vwfsStartupBusiness, setVwfsStartupBusiness,
+    vwfsSecondBrain,
     purchasePrice,
     setPurchasePrice,
     deposit,
@@ -616,7 +736,7 @@ function MobileLayout(props) {
 
           <section className="tools">
             <Tool title="Target Repayment" icon={<Calculator />} onClick={() => props.setActiveSheet("target")} />
-            <Tool title="Deal Structuring" icon={<BadgeDollarSign />} onClick={() => props.setActiveSheet("structure")} />
+            <Tool title="VWFS Brain" icon={<Wrench />} onClick={() => props.setActiveSheet("vwfs")} />
             <Tool title="Saved Quotes" icon={<Search />} onClick={() => props.setActiveSheet("quotes")} />
           </section>
 
@@ -673,6 +793,10 @@ function DesktopLayout(props) {
               <Field label="Vehicle" value={props.vehicle} setValue={props.setVehicle} />
               <Field label="Stock / Ref" value={props.stockRef} setValue={props.setStockRef} />
             </div>
+          </Panel>
+
+          <Panel title="VWFS Customer Profile + Waiver Engine" icon={<Wrench />}>
+            <VwfsBrainPanel {...props} />
           </Panel>
 
           <Panel title="Lender Selection" icon={<FileText />}>
@@ -927,12 +1051,73 @@ function TargetPanel(props) {
   );
 }
 
+
+function VwfsBrainPanel(props) {
+  const brain = props.vwfsSecondBrain;
+  const decisionClass = brain.decision.toLowerCase().replace(" ", "-");
+
+  return (
+    <div className="vwfs-brain">
+      <div className={`vwfs-decision ${decisionClass}`}>
+        <span>VWFS Waiver Result</span>
+        <b>{brain.decision}</b>
+        <small>{brain.bestTier?.label || "No matching tier"}</small>
+      </div>
+
+      <div className="vwfs-profile-grid">
+        <SelectField label="Loan Type" value={props.vwfsLoanPurpose} setValue={props.setVwfsLoanPurpose} options={[["commercial","Commercial"],["consumer","Consumer"]]} />
+        <SelectField label="Entity Type" value={props.vwfsEntityType} setValue={props.setVwfsEntityType} options={[["soleTrader","Sole Trader"],["company","Company"],["trust","Trust"],["individual","Individual"]]} />
+        <Field label="ABN Age" value={props.vwfsAbnYears} setValue={props.setVwfsAbnYears} suffix="yrs" />
+        <Field label="GST Age" value={props.vwfsGstYears} setValue={props.setVwfsGstYears} suffix="yrs" />
+        <SelectField label="Asset Backed" value={props.vwfsAssetBacked} setValue={props.setVwfsAssetBacked} options={[["yes","Yes"],["no","No"]]} />
+        <SelectField label="Credit Rating" value={props.vwfsCreditRating} setValue={props.setVwfsCreditRating} options={[["good","Good"],["average","Average"],["poor","Poor"]]} />
+        <Field label="Credit File Age" value={props.vwfsCreditFileYears} setValue={props.setVwfsCreditFileYears} suffix="yrs" />
+        <SelectField label="Vehicle Type" value={props.vwfsVehicleType} setValue={props.setVwfsVehicleType} options={[["branded","VWFS branded"],["whiteLabel","White label"],["all","All vehicles"],["other","Other"]]} />
+        <SelectField label="Channel" value={props.vwfsDealerChannel} setValue={props.setVwfsDealerChannel} options={[["pos","POS dealer"],["broker","Broker"]]} />
+        <SelectField label="Replacement" value={props.vwfsReplacementDeal} setValue={props.setVwfsReplacementDeal} options={[["no","No"],["yes","Yes"]]} />
+        <Field label="Repayment Increase" value={props.vwfsRepaymentIncrease} setValue={props.setVwfsRepaymentIncrease} suffix="%" />
+        <SelectField label="Start Up" value={props.vwfsStartupBusiness} setValue={props.setVwfsStartupBusiness} options={[["no","No"],["yes","Yes"]]} />
+      </div>
+
+      <div className="vwfs-columns">
+        <div className="vwfs-list"><span>Strengths</span>{brain.strengths.length ? brain.strengths.map((item)=><p key={item}>✓ {item}</p>) : <p>No major strengths captured yet.</p>}</div>
+        <div className="vwfs-list"><span>Risks</span>{brain.risks.length ? brain.risks.map((item)=><p key={item}>⚠ {item}</p>) : <p>No major risks captured.</p>}</div>
+      </div>
+
+      <div className="vwfs-list recommendations"><span>Finance Manager Notes</span>{brain.recommendations.map((item)=><p key={item}>→ {item}</p>)}</div>
+
+      <div className="vwfs-tier-list">
+        <span>Policy Tier Checks</span>
+        {brain.tierResults.map((tier)=>(
+          <details key={tier.key}>
+            <summary><b>{tier.label}</b><em className={tier.status.toLowerCase().replace(" ","-")}>{tier.status}</em></summary>
+            <div>{tier.checks.map((check)=><p key={`${tier.key}-${check.label}`} className={check.pass ? "pass" : "fail"}>{check.pass ? "✓" : "✕"} {check.label}: {check.detail}</p>)}</div>
+          </details>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SelectField({ label, value, setValue, options }) {
+  return (
+    <label className="select-field">
+      <span>{label}</span>
+      <select value={value} onChange={(event) => setValue(event.target.value)}>
+        {options.map(([optionValue, optionLabel]) => <option value={optionValue} key={optionValue}>{optionLabel}</option>)}
+      </select>
+    </label>
+  );
+}
+
+
 function ActionSheet(props) {
   const titles = {
     send: "Send Quote",
     client: "Client Profile",
     quotes: "Saved Quotes",
     target: "Target Repayment",
+    vwfs: "VWFS Second Brain",
     structure: "Deal Structuring",
     saved: "Saved"
   };
@@ -965,6 +1150,7 @@ function ActionSheet(props) {
 
         {props.activeSheet === "quotes" && <SavedQuotes {...props} />}
         {props.activeSheet === "target" && <TargetPanel {...props} />}
+        {props.activeSheet === "vwfs" && <VwfsBrainPanel {...props} />}
 
         {props.activeSheet === "structure" && (
           <div className="flags">

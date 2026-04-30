@@ -912,3 +912,34 @@ button {
     justify-content: flex-start;
   }
 }
+
+/* VWFS Second Brain */
+.vwfs-brain { display: grid; gap: 12px; }
+.vwfs-decision { border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(255,255,255,.045); padding: 12px; }
+.vwfs-decision span, .vwfs-list > span, .vwfs-tier-list > span { display:block; color:rgba(255,255,255,.45); font-size:9px; letter-spacing:.16em; text-transform:uppercase; font-weight:600; }
+.vwfs-decision b { display:block; margin-top:5px; font-size:22px; font-weight:600; }
+.vwfs-decision small { display:block; margin-top:4px; color:rgba(255,255,255,.58); font-size:12px; }
+.vwfs-decision.eligible { border-color:rgba(65,191,40,.38); background:rgba(65,191,40,.075); }
+.vwfs-decision.eligible b { color:#41bf28; }
+.vwfs-decision.conditional { border-color:rgba(255,180,0,.38); background:rgba(255,180,0,.075); }
+.vwfs-decision.conditional b { color:rgba(255,210,120,.95); }
+.vwfs-decision.not-eligible { border-color:rgba(255,80,80,.38); background:rgba(255,80,80,.075); }
+.vwfs-decision.not-eligible b { color:rgba(255,115,115,.95); }
+.vwfs-profile-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.vwfs-columns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.vwfs-list { border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(255,255,255,.035); padding:10px; }
+.vwfs-list p { margin:8px 0 0; color:rgba(255,255,255,.68); font-size:12px; line-height:1.35; }
+.vwfs-list.recommendations { border-color:rgba(65,191,40,.22); background:rgba(65,191,40,.045); }
+.vwfs-tier-list { display:grid; gap:8px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(255,255,255,.035); padding:10px; }
+.vwfs-tier-list details { border:1px solid rgba(255,255,255,.1); border-radius:8px; background:rgba(0,0,0,.22); padding:9px; }
+.vwfs-tier-list summary { cursor:pointer; display:flex; justify-content:space-between; gap:10px; align-items:center; }
+.vwfs-tier-list summary b { font-size:12px; font-weight:600; }
+.vwfs-tier-list summary em { font-style:normal; font-size:10px; font-weight:700; border-radius:999px; padding:5px 7px; border:1px solid rgba(255,255,255,.14); }
+.vwfs-tier-list summary em.eligible { color:#41bf28; border-color:rgba(65,191,40,.35); }
+.vwfs-tier-list summary em.conditional { color:rgba(255,210,120,.95); border-color:rgba(255,180,0,.35); }
+.vwfs-tier-list summary em.not-eligible { color:rgba(255,115,115,.95); border-color:rgba(255,80,80,.35); }
+.vwfs-tier-list details div { margin-top:8px; display:grid; gap:6px; }
+.vwfs-tier-list p { margin:0; font-size:12px; line-height:1.35; color:rgba(255,255,255,.62); }
+.vwfs-tier-list p.pass { color:rgba(120,220,120,.85); }
+.vwfs-tier-list p.fail { color:rgba(255,150,150,.85); }
+@media (max-width:800px) { .vwfs-profile-grid, .vwfs-columns { grid-template-columns:1fr; } }
