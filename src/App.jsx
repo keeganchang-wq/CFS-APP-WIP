@@ -91,6 +91,7 @@ function loadSavedQuotes() {
 
 export default function App() {
   const [displayMode, setDisplayMode] = useState("auto");
+  const [appPage, setAppPage] = useState("calculator");
 
   const [lenderKey, setLenderKey] = useState("VWFS");
   const [lenderFees, setLenderFees] = useState(LENDERS);
@@ -636,6 +637,8 @@ Estimate only. Subject to approval.`;
   const sharedProps = {
     displayMode,
     setDisplayMode,
+    appPage,
+    setAppPage,
     lenderKey,
     setLenderKey,
     lenderFees,
@@ -716,39 +719,52 @@ function MobileLayout(props) {
       <div className="phone">
         <header className="mobile-header">
           <Brand />
-          <ModeToggle {...props} />
+          <div className="header-controls">
+            <PageToggle {...props} />
+            <ModeToggle {...props} />
+          </div>
         </header>
 
         <main className="mobile-main">
-          <Hero monthly={props.calc.monthly} />
+          {props.appPage === "calculator" ? (
+            <>
+              <Hero monthly={props.calc.monthly} />
 
-          <button className="client-strip" onClick={() => props.setActiveSheet("client")}>
-            <User size={18} />
-            <div>
-              <b>{props.clientName || "Client Profile"}</b>
-              <span>{props.vehicle || "Tap to add client + vehicle"}</span>
-            </div>
-          </button>
+              <button className="client-strip" onClick={() => props.setActiveSheet("client")}>
+                <User size={18} />
+                <div>
+                  <b>{props.clientName || "Client Profile"}</b>
+                  <span>{props.vehicle || "Tap to add client + vehicle"}</span>
+                </div>
+              </button>
 
-          <LenderDropdown {...props} />
-          <Tabs {...props} />
-          <MobileContent {...props} />
+              <LenderDropdown {...props} />
+              <Tabs {...props} />
+              <MobileContent {...props} />
 
-          <section className="tools">
-            <Tool title="Target Repayment" icon={<Calculator />} onClick={() => props.setActiveSheet("target")} />
-            <Tool title="VWFS Brain" icon={<Wrench />} onClick={() => props.setActiveSheet("vwfs")} />
-            <Tool title="Saved Quotes" icon={<Search />} onClick={() => props.setActiveSheet("quotes")} />
-          </section>
+              <section className="tools">
+                <Tool title="Target Repayment" icon={<Calculator />} onClick={() => props.setActiveSheet("target")} />
+                <Tool title="Saved Quotes" icon={<Search />} onClick={() => props.setActiveSheet("quotes")} />
+                <Tool title="Client Profile" icon={<User />} onClick={() => props.setActiveSheet("client")} />
+              </section>
 
-          <p className="disclaimer">Estimate only. Subject to approval, lender policy and final contract terms.</p>
+              <p className="disclaimer">Estimate only. Subject to approval, lender policy and final contract terms.</p>
+            </>
+          ) : (
+            <PagePanel title="VWFS Customer Profile + Waiver Engine" icon={<Wrench />}>
+              <VwfsBrainPanel {...props} />
+            </PagePanel>
+          )}
         </main>
 
-        <nav className="bottom-nav">
-          <button className="selected"><Calculator size={22} /><span>Calc</span></button>
-          <button onClick={props.saveQuote}><Save size={22} /><span>Save</span></button>
-          <button onClick={() => props.setActiveSheet("client")}><User size={22} /><span>Client</span></button>
-          <button onClick={() => props.setActiveSheet("send")}><MoreHorizontal size={22} /><span>Send</span></button>
-        </nav>
+        {props.appPage === "calculator" && (
+          <nav className="bottom-nav">
+            <button className="selected"><Calculator size={22} /><span>Calc</span></button>
+            <button onClick={props.saveQuote}><Save size={22} /><span>Save</span></button>
+            <button onClick={() => props.setActiveSheet("client")}><User size={22} /><span>Client</span></button>
+            <button onClick={() => props.setActiveSheet("send")}><MoreHorizontal size={22} /><span>Send</span></button>
+          </nav>
+        )}
 
         {props.activeSheet && <ActionSheet {...props} />}
       </div>
@@ -770,8 +786,9 @@ function DesktopLayout(props) {
         </div>
       </header>
 
-      <main className="desktop-layout">
-        <section className="desktop-left">
+      {props.appPage === "calculator" ? (
+        <main className="desktop-layout">
+          <section className="desktop-left">
           <Hero monthly={props.calc.monthly} />
           <div className="summary-grid">
             <Metric label="Monthly" value={money(props.calc.monthly)} />
@@ -793,10 +810,6 @@ function DesktopLayout(props) {
               <Field label="Vehicle" value={props.vehicle} setValue={props.setVehicle} />
               <Field label="Stock / Ref" value={props.stockRef} setValue={props.setStockRef} />
             </div>
-          </Panel>
-
-          <Panel title="VWFS Customer Profile + Waiver Engine" icon={<Wrench />}>
-            <VwfsBrainPanel {...props} />
           </Panel>
 
           <Panel title="Lender Selection" icon={<FileText />}>
@@ -826,8 +839,15 @@ function DesktopLayout(props) {
               </div>
             </Panel>
           </div>
-        </section>
-      </main>
+          </section>
+        </main>
+      ) : (
+        <main className="desktop-policy-page">
+          <PagePanel title="VWFS Customer Profile + Waiver Engine" icon={<Wrench />}>
+            <VwfsBrainPanel {...props} />
+          </PagePanel>
+        </main>
+      )}
     </div>
   );
 }
@@ -844,6 +864,38 @@ function Brand() {
       <h1>CAVALO</h1>
       <p><i />PRESTIGE<i /></p>
     </div>
+  );
+}
+
+
+function PageToggle(props) {
+  return (
+    <div className="page-toggle">
+      <button
+        className={props.appPage === "calculator" ? "active" : ""}
+        onClick={() => props.setAppPage("calculator")}
+      >
+        Calculator
+      </button>
+      <button
+        className={props.appPage === "vwfs" ? "active" : ""}
+        onClick={() => props.setAppPage("vwfs")}
+      >
+        VWFS Brain
+      </button>
+    </div>
+  );
+}
+
+function PagePanel({ title, icon, children }) {
+  return (
+    <section className="page-panel">
+      <div className="panel-head">
+        {React.cloneElement(icon, { size: 20 })}
+        <h3>{title}</h3>
+      </div>
+      {children}
+    </section>
   );
 }
 

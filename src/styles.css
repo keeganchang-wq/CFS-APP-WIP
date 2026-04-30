@@ -943,3 +943,70 @@ button {
 .vwfs-tier-list p.pass { color:rgba(120,220,120,.85); }
 .vwfs-tier-list p.fail { color:rgba(255,150,150,.85); }
 @media (max-width:800px) { .vwfs-profile-grid, .vwfs-columns { grid-template-columns:1fr; } }
+
+
+/* Separate page navigation */
+.header-controls {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.page-toggle {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  background: rgba(255,255,255,.05);
+}
+
+.page-toggle button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255,255,255,.62);
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.page-toggle button.active {
+  background: #41bf28;
+  color: #000;
+}
+
+.desktop-policy-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.page-panel {
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.018));
+  padding: 15px;
+}
+
+@media (min-width: 1101px) {
+  .desktop-header {
+    grid-template-columns: auto auto auto 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-header {
+    align-items: flex-start;
+  }
+
+  .header-controls .mode-toggle {
+    transform-origin: right top;
+  }
+
+  .page-toggle button,
+  .mode-toggle button {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+}
