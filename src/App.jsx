@@ -1324,6 +1324,46 @@ function TargetPanel(props) {
 
 
 
+
+function LowDocResults({ title = "LOW DOC RESULTS", result }) {
+  if (!result) return null;
+
+  const missing = result.missing || [];
+  const isTooFar = result.status !== "Eligible" && missing.length > 2;
+  const statusText = result.status === "Eligible" ? "Fits Policy" : result.status;
+
+  return (
+    <div className="low-doc-results">
+      <span>{title}</span>
+      <div className={`low-doc-status ${result.status.toLowerCase().replace(" ", "-")}`}>
+        <b>{statusText}</b>
+        <small>{result.pathway}</small>
+      </div>
+
+      {result.status === "Eligible" ? (
+        <p className="low-doc-fit">✓ This deal appears to fit the selected low doc / fast track policy.</p>
+      ) : isTooFar ? (
+        <p className="low-doc-decline">Does not fit low doc policy.</p>
+      ) : (
+        <div className="low-doc-missing">
+          <strong>Missing Conditions</strong>
+          {missing.map((item, index) => (
+            <p key={`${item}-${index}`}>{index + 1}. {item}</p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildLowDocResult({ status, pathway, checks }) {
+  const missing = (checks || [])
+    .filter((check) => !check.pass)
+    .map((check) => check.short || check.label || check.detail);
+
+  return { status, pathway, missing };
+}
+
 function CfsAiPage(props) {
   const lenderOptions = Object.entries(props.lenderFees).map(([key, lender]) => [key, lender.name]);
   const activeLenderName = props.lenderFees[props.cfsAiLender]?.name || "VWFS";
@@ -1407,16 +1447,9 @@ function PolicyResultCard({ title, status, subtitle }) {
 }
 
 function CheckList({ checks }) {
-  return (
-    <div className="vwfs-tier-list">
-      <span>Policy Checks</span>
-      {checks.map((check) => (
-        <p key={check.label} className={check.pass ? "pass" : "fail"}>
-          {check.pass ? "✓" : "✕"} {check.label}: {check.detail}
-        </p>
-      ))}
-    </div>
-  );
+  const missing = (checks || []).filter((check) => !check.pass);
+  const status = missing.length === 0 ? "Eligible" : missing.length <= 2 ? "Conditional" : "Not Eligible";
+  return <LowDocResults result={buildLowDocResult({ status, pathway: "Best matching pathway", checks })} />;
 }
 
 function EngineNotes({ strengths = [], risks = [], recommendations = [] }) {
@@ -1495,15 +1528,7 @@ function PepperEnginePanel(props) {
       <DepositConditionCard calc={props.calc} />
       <CfsSharedInputs {...props} />
       <EngineNotes strengths={[`Best tier: ${best.label}`, `Equity position: ${equityPercent.toFixed(2)}%`]} risks={best.checks.filter(c=>!c.pass).map(c=>c.label)} recommendations={recommendations} />
-      <div className="vwfs-tier-list">
-        <span>Tier Checks</span>
-        {tiers.map((tier)=>(
-          <details key={tier.label}>
-            <summary><b>{tier.label}</b><em className={tier.status.toLowerCase().replace(" ","-")}>{tier.status}</em></summary>
-            <div>{tier.checks.map(c=><p key={c.label} className={c.pass ? "pass" : "fail"}>{c.pass ? "✓" : "✕"} {c.label}: {c.detail}</p>)}</div>
-          </details>
-        ))}
-      </div>
+      <LowDocResults result={buildLowDocResult({ status: best.status, pathway: best.label, checks: best.checks })} />
     </div>
   );
 }
@@ -1551,15 +1576,7 @@ function AngleCommercialEnginePanel(props) {
       <BalloonValidationCard assessment={props.balloonAssessment} calc={props.calc} />
       <CfsSharedInputs {...props} />
       <EngineNotes strengths={[`Best pathway: ${best.label}`, `Equity: ${equityPercent.toFixed(2)}%`]} risks={best.checks.filter(c=>!c.pass).map(c=>c.label)} recommendations={recommendations} />
-      <div className="vwfs-tier-list">
-        <span>Angle Pathway Checks</span>
-        {pathways.map((p)=>(
-          <details key={p.label}>
-            <summary><b>{p.label}</b><em className={p.status.toLowerCase().replace(" ","-")}>{p.status}</em></summary>
-            <div>{p.checks.map(c=><p key={c.label} className={c.pass ? "pass" : "fail"}>{c.pass ? "✓" : "✕"} {c.label}: {c.detail}</p>)}</div>
-          </details>
-        ))}
-      </div>
+      <LowDocResults result={buildLowDocResult({ status: best.status, pathway: best.label, checks: best.checks })} />
     </div>
   );
 }
@@ -1610,15 +1627,7 @@ function AlliedEnginePanel(props) {
       <DepositConditionCard calc={props.calc} />
       <CfsSharedInputs {...props} />
       <EngineNotes strengths={[`Best pathway: ${best.label}`, `Asset backed: ${assetBacked ? "Yes" : "No"}`]} risks={best.checks.filter(c=>!c.pass).map(c=>c.label)} recommendations={recommendations} />
-      <div className="vwfs-tier-list">
-        <span>Allied Pathway Checks</span>
-        {products.map((p)=>(
-          <details key={p.label}>
-            <summary><b>{p.label}</b><em className={p.status.toLowerCase().replace(" ","-")}>{p.status}</em></summary>
-            <div>{p.checks.map(c=><p key={c.label} className={c.pass ? "pass" : "fail"}>{c.pass ? "✓" : "✕"} {c.label}: {c.detail}</p>)}</div>
-          </details>
-        ))}
-      </div>
+      <LowDocResults result={buildLowDocResult({ status: best.status, pathway: best.label, checks: best.checks })} />
     </div>
   );
 }
@@ -1671,15 +1680,7 @@ function TaurusEnginePanel(props) {
       <DepositConditionCard calc={props.calc} />
       <CfsSharedInputs {...props} />
       <EngineNotes strengths={[`Auto-selected product: ${best.label}`, `Bureau score: ${bureau}`]} risks={best.checks.filter(c=>!c.pass).map(c=>c.label)} recommendations={recommendations} />
-      <div className="vwfs-tier-list">
-        <span>Taurus Product Checks</span>
-        {products.map((p)=>(
-          <details key={p.label}>
-            <summary><b>{p.label}</b><em className={p.status.toLowerCase().replace(" ","-")}>{p.status}</em></summary>
-            <div>{p.checks.map(c=><p key={c.label} className={c.pass ? "pass" : "fail"}>{c.pass ? "✓" : "✕"} {c.label}: {c.detail}</p>)}</div>
-          </details>
-        ))}
-      </div>
+      <LowDocResults result={buildLowDocResult({ status: best.status, pathway: best.label, checks: best.checks })} />
     </div>
   );
 }
@@ -1768,15 +1769,7 @@ function VwfsBrainPanel(props) {
 
       <div className="vwfs-list recommendations"><span>Finance Manager Notes</span>{brain.recommendations.map((item)=><p key={item}>→ {item}</p>)}</div>
 
-      <div className="vwfs-tier-list">
-        <span>Policy Tier Checks</span>
-        {brain.tierResults.map((tier)=>(
-          <details key={tier.key}>
-            <summary><b>{tier.label}</b><em className={tier.status.toLowerCase().replace(" ","-")}>{tier.status}</em></summary>
-            <div>{tier.checks.map((check)=><p key={`${tier.key}-${check.label}`} className={check.pass ? "pass" : "fail"}>{check.pass ? "✓" : "✕"} {check.label}: {check.detail}</p>)}</div>
-          </details>
-        ))}
-      </div>
+      <LowDocResults result={buildLowDocResult({ status: brain.bestTier?.status || brain.decision, pathway: brain.bestTier?.label || "VWFS waiver pathway", checks: brain.bestTier?.checks || [] })} />
     </div>
   );
 }

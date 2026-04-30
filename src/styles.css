@@ -1406,3 +1406,115 @@ button {
     align-items: flex-start;
   }
 }
+
+
+/* Clean LOW DOC RESULTS */
+.low-doc-results {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  background: rgba(255,255,255,.035);
+  padding: 12px;
+}
+
+.low-doc-results > span {
+  display: block;
+  color: rgba(255,255,255,.45);
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.low-doc-status {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.22);
+  border-radius: 9px;
+  padding: 10px;
+}
+
+.low-doc-status b {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255,255,255,.9);
+}
+
+.low-doc-status small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.low-doc-status.eligible {
+  border-color: rgba(65,191,40,.35);
+  background: rgba(65,191,40,.07);
+}
+
+.low-doc-status.eligible b {
+  color: #41bf28;
+}
+
+.low-doc-status.conditional {
+  border-color: rgba(255,180,0,.35);
+  background: rgba(255,180,0,.07);
+}
+
+.low-doc-status.conditional b {
+  color: rgba(255,210,120,.95);
+}
+
+.low-doc-status.not-eligible {
+  border-color: rgba(255,80,80,.35);
+  background: rgba(255,80,80,.07);
+}
+
+.low-doc-status.not-eligible b {
+  color: rgba(255,115,115,.95);
+}
+
+.low-doc-fit,
+.low-doc-decline {
+  margin: 0;
+  border-radius: 9px;
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.low-doc-fit {
+  color: #41bf28;
+  background: rgba(65,191,40,.06);
+  border: 1px solid rgba(65,191,40,.22);
+}
+
+.low-doc-decline {
+  color: rgba(255,115,115,.95);
+  background: rgba(255,80,80,.06);
+  border: 1px solid rgba(255,80,80,.22);
+}
+
+.low-doc-missing {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(255,180,0,.25);
+  background: rgba(255,180,0,.055);
+  border-radius: 9px;
+  padding: 10px;
+}
+
+.low-doc-missing strong {
+  color: rgba(255,210,120,.95);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.low-doc-missing p {
+  margin: 0;
+  color: rgba(255,255,255,.72);
+  font-size: 12px;
+  line-height: 1.35;
+}
