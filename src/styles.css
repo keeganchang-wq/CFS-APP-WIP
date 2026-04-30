@@ -1124,3 +1124,116 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* VWFS v2 criteria button inputs */
+.button-group-field > span,
+.deposit-condition > span {
+  display: block;
+  margin-bottom: 5px;
+  color: rgba(255,255,255,.45);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.button-group-field > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.button-group-field button {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.72);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.button-group-field button.active {
+  border-color: rgba(65,191,40,.45);
+  background: rgba(65,191,40,.13);
+  color: #41bf28;
+}
+
+.deposit-condition {
+  border: 1px solid rgba(65,191,40,.28);
+  background: rgba(65,191,40,.055);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.deposit-condition b {
+  display: block;
+  margin-top: 5px;
+  color: #41bf28;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.deposit-condition small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+
+/* Always-visible Calculator / CFS AI toggle */
+.global-page-switch {
+  position: fixed;
+  z-index: 100;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+  background: rgba(10,10,10,.88);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.28);
+}
+
+.global-page-switch button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255,255,255,.68);
+  padding: 8px 13px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.global-page-switch button.active {
+  background: #41bf28;
+  color: #000;
+}
+
+.mobile-header,
+.desktop-header {
+  padding-top: 58px !important;
+}
+
+@media (min-width: 768px) {
+  .global-page-switch {
+    top: 18px;
+  }
+
+  .desktop-header {
+    padding-top: 58px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .global-page-switch button {
+    padding: 7px 11px;
+    font-size: 11px;
+  }
+}

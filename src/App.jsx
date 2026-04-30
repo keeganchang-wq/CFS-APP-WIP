@@ -38,12 +38,68 @@ const VWFS_VEHICLE_TYPES = {
 };
 
 const VWFS_POLICY_TIERS = [
-  { key:"waiverUnder120", label:"Waiver of Financials <$120k", min:0, max:120000, req:{ assetBacked:true, abnYears:2, creditFileYears:2, vehicle:"all", channel:"both", maxLvr:null } },
-  { key:"waiverUnder130", label:"Waiver of Financials <$130k", min:0, max:130000, req:{ assetBacked:true, abnYears:2, creditFileYears:2, vehicle:"brandedOrWhiteLabel", channel:"both", maxLvr:null } },
-  { key:"waiver130to200", label:"Waiver of Financials >$130k - <$200k", min:130000, max:200000, req:{ assetBacked:true, abnYears:2, gstYears:2, creditFileYears:2, creditRating:"good", vehicle:"all", channel:"both", maxLvr:100 } },
-  { key:"waiver200to300", label:"Waiver of Financials >$200k - <$300k", min:200000, max:300000, req:{ assetBacked:true, abnYears:2, gstYears:2, creditFileYears:2, creditRating:"good", vehicle:"brandedOrWhiteLabel", channel:"posOnly", maxLvr:100, repaymentIncreaseCap:40 } },
-  { key:"replacement200to300", label:"Replacement Policy >$200k - <$300k", min:200000, max:300000, replacementOnly:true, req:{ abnYears:2, gstYears:2, creditFileYears:2, creditRating:"good", vehicle:"brandedOrWhiteLabel", channel:"posOnly", maxLvr:100, repaymentIncreaseCap:40 } },
-  { key:"startupUnder100", label:"Start Up Business Policy <$100k", min:0, max:100000, startupOnly:true, req:{ depositPercent:20, creditFileYears:2, vehicle:"all", channel:"both", gstRegistered:true } }
+  {
+    key: "standardUnder130",
+    label: "Standard Waiver under $130k",
+    min: 0,
+    max: 130000,
+    req: {
+      assetBackedOrDeposit20: true,
+      abnYears: 2,
+      gstRequired: false
+    }
+  },
+  {
+    key: "waiver130to200",
+    label: "$130k - $200k Waiver",
+    min: 130000,
+    max: 200000,
+    req: {
+      assetBackedOrDeposit20: true,
+      abnYears: 2,
+      gstRequired: true,
+      aRatedOrSavings: true,
+      maxLvr: 100
+    }
+  },
+  {
+    key: "waiver200to300",
+    label: "$200k - $300k Waiver",
+    min: 200000,
+    max: 300000,
+    req: {
+      assetBackedOrDeposit20: true,
+      abnYears: 2,
+      gstRequired: true,
+      aRatedRequired: true,
+      maxLvr: 100
+    }
+  },
+  {
+    key: "replacement200to300",
+    label: "Replacement $200k - $300k",
+    min: 200000,
+    max: 300000,
+    replacementOnly: true,
+    req: {
+      abnYears: 2,
+      repaymentIncreaseCap: 40,
+      aRatedCurrentLoan: true
+    }
+  },
+  {
+    key: "startupNewVenture",
+    label: "Start Up / New Venture Policy",
+    min: 0,
+    max: 100000,
+    startupOnly: true,
+    req: {
+      newVentureDepositRule: true,
+      amountUnder100: true,
+      abnUnder2: true,
+      noSoleTraderContinuity: true
+    }
+  }
 ];
 
 const LOCK_LABELS = {
@@ -112,12 +168,14 @@ export default function App() {
   const [vwfsGstYears, setVwfsGstYears] = useState("2");
   const [vwfsAssetBacked, setVwfsAssetBacked] = useState("yes");
   const [vwfsCreditRating, setVwfsCreditRating] = useState("good");
+  const [vwfsProofOfSavings, setVwfsProofOfSavings] = useState("no");
   const [vwfsCreditFileYears, setVwfsCreditFileYears] = useState("2");
   const [vwfsVehicleType, setVwfsVehicleType] = useState("branded");
-  const [vwfsDealerChannel, setVwfsDealerChannel] = useState("pos");
   const [vwfsReplacementDeal, setVwfsReplacementDeal] = useState("no");
   const [vwfsRepaymentIncrease, setVwfsRepaymentIncrease] = useState("0");
+  const [vwfsCurrentLoanARated, setVwfsCurrentLoanARated] = useState("no");
   const [vwfsStartupBusiness, setVwfsStartupBusiness] = useState("no");
+  const [vwfsAbnContinuity, setVwfsAbnContinuity] = useState("no");
 
   const [purchasePrice, setPurchasePrice] = useState("132940");
   const [deposit, setDeposit] = useState("0");
@@ -427,26 +485,97 @@ export default function App() {
     const checks = [];
     const amount = calc.amountFinanced;
     const depositPercent = calc.price ? (calc.cashDeposit / calc.price) * 100 : 0;
-    const brandedOrWhite = ["branded", "whiteLabel"].includes(vwfsVehicleType);
+    const has20Deposit = depositPercent >= 20;
+    const has10Deposit = depositPercent >= 10;
+    const assetBacked = vwfsAssetBacked === "yes";
+    const abnOver2 = cleanNumber(vwfsAbnYears) >= 2;
+    const gstRegistered = cleanNumber(vwfsGstYears) > 0;
+    const aRatedCredit = vwfsCreditRating === "good";
+    const hasSavings = vwfsProofOfSavings === "yes";
+    const abnContinuity = vwfsAbnContinuity === "yes";
     const add = (label, pass, detail) => checks.push({ label, pass, detail });
 
     add("Loan amount band", amount >= tier.min && amount < tier.max, `${money(amount)} vs ${tier.label}`);
 
-    if (tier.replacementOnly) add("Replacement deal", vwfsReplacementDeal === "yes", "Replacement policy applies only to replacement deals.");
-    if (tier.startupOnly) add("Start up business", vwfsStartupBusiness === "yes", "Start up policy applies only to start up business applications.");
+    if (tier.replacementOnly) {
+      add("Replacement deal", vwfsReplacementDeal === "yes", "This pathway only applies to replacement finance.");
+    }
 
-    if (req.assetBacked) add("Asset backed", vwfsAssetBacked === "yes", vwfsAssetBacked === "yes" ? "Real property ownership confirmed." : "Applicant is not asset backed.");
-    if (req.abnYears) add("ABN established", cleanNumber(vwfsAbnYears) > req.abnYears, `ABN age ${vwfsAbnYears || 0} years. Required > ${req.abnYears}.`);
-    if (req.gstYears) add("GST registration", cleanNumber(vwfsGstYears) > req.gstYears, `GST age ${vwfsGstYears || 0} years. Required > ${req.gstYears}.`);
-    if (req.gstRegistered) add("GST registered", cleanNumber(vwfsGstYears) > 0, "New/start up entities must be GST registered.");
-    if (req.creditFileYears) add("Clear credit file", cleanNumber(vwfsCreditFileYears) > req.creditFileYears && vwfsCreditRating !== "poor", `Credit file ${vwfsCreditFileYears || 0} years, rating ${vwfsCreditRating}.`);
-    if (req.creditRating === "good") add("Good / A-rated credit", vwfsCreditRating === "good", "Higher exposure waiver tiers require strong credit.");
-    if (req.vehicle === "brandedOrWhiteLabel") add("Vehicle type", brandedOrWhite, "This tier is branded / white label only.");
-    if (req.vehicle === "all") add("Vehicle type", vwfsVehicleType !== "other", "This tier allows all vehicles, subject to normal policy.");
-    if (req.channel === "posOnly") add("Dealer channel", vwfsDealerChannel === "pos", "This tier is POS dealers only.");
-    if (req.depositPercent) add("Minimum deposit", depositPercent >= req.depositPercent, `Deposit ${depositPercent.toFixed(2)}%. Required ${req.depositPercent}%.`);
-    if (req.maxLvr) add("Max LVR", calc.lvr <= req.maxLvr, `LVR ${calc.lvr.toFixed(2)}%. Required <= ${req.maxLvr}%.`);
-    if (req.repaymentIncreaseCap && vwfsReplacementDeal === "yes") add("Repayment increase", cleanNumber(vwfsRepaymentIncrease) <= req.repaymentIncreaseCap, `Increase ${vwfsRepaymentIncrease || 0}%. Required <= ${req.repaymentIncreaseCap}%.`);
+    if (tier.startupOnly) {
+      add("Start up / new venture", vwfsStartupBusiness === "yes", "This pathway applies to start up / new venture applications.");
+    }
+
+    if (req.assetBackedOrDeposit20) {
+      add(
+        "Asset backing or 20% deposit",
+        assetBacked || has20Deposit,
+        assetBacked
+          ? "Asset backed applicant satisfies this condition."
+          : `Deposit is ${depositPercent.toFixed(2)}%. Required 20% if not asset backed.`
+      );
+    }
+
+    if (req.abnYears) {
+      add(
+        "ABN established 2 years",
+        abnOver2 || abnContinuity,
+        abnOver2
+          ? `ABN age is ${vwfsAbnYears} years.`
+          : abnContinuity
+            ? "ABN is under 2 years but continuity selected."
+            : `ABN age is ${vwfsAbnYears || 0} years. ABN continuity may be needed.`
+      );
+    }
+
+    if (req.gstRequired) {
+      add("GST registration required", gstRegistered, gstRegistered ? "GST registration confirmed." : "GST registration required for this tier.");
+    }
+
+    if (req.aRatedOrSavings) {
+      add(
+        "A rated credit or proof of savings",
+        aRatedCredit || hasSavings,
+        aRatedCredit ? "A rated / good credit selected." : hasSavings ? "Proof of savings selected in lieu of A rated credit." : "Requires A rated credit or proof of savings."
+      );
+    }
+
+    if (req.aRatedRequired) {
+      add("A rated credit required", aRatedCredit, aRatedCredit ? "A rated / good credit selected." : "A rated credit required for this tier.");
+    }
+
+    if (req.maxLvr) {
+      add("Max LVR 100%", calc.lvr <= req.maxLvr, `LVR is ${calc.lvr.toFixed(2)}%. Required <= ${req.maxLvr}%.`);
+    }
+
+    if (req.repaymentIncreaseCap) {
+      add("Repayment increase <= 40%", cleanNumber(vwfsRepaymentIncrease) <= req.repaymentIncreaseCap, `Repayment increase is ${vwfsRepaymentIncrease || 0}%.`);
+    }
+
+    if (req.aRatedCurrentLoan) {
+      add("A rated current loan", vwfsCurrentLoanARated === "yes", "A rated current loan with another financier or VWFS required.");
+    }
+
+    if (req.newVentureDepositRule) {
+      add(
+        "Start up deposit condition",
+        assetBacked ? has10Deposit : has20Deposit,
+        assetBacked
+          ? `Asset backed: deposit is ${depositPercent.toFixed(2)}%. Required 10%.`
+          : `Not asset backed: deposit is ${depositPercent.toFixed(2)}%. Required 20%.`
+      );
+    }
+
+    if (req.amountUnder100) {
+      add("NAF under $100k", amount < 100000, `NAF is ${money(amount)}. Required under $100k.`);
+    }
+
+    if (req.abnUnder2) {
+      add("ABN under 2 years", cleanNumber(vwfsAbnYears) < 2, `ABN age is ${vwfsAbnYears || 0} years.`);
+    }
+
+    if (req.noSoleTraderContinuity) {
+      add("No sole trader ABN continuity", vwfsAbnContinuity === "no", "New venture pathway requires no sole trader ABN continuity.");
+    }
 
     const failed = checks.filter(c => !c.pass);
     return {
@@ -474,9 +603,11 @@ export default function App() {
     else risks.push("ABN history may restrict waiver eligibility.");
     if (cleanNumber(vwfsGstYears) > 2) strengths.push("GST registered for more than 2 years.");
     else risks.push("GST history may restrict higher exposure tiers.");
-    if (vwfsCreditRating === "good") strengths.push("Credit profile marked Good.");
-    if (vwfsCreditRating === "average") risks.push("Average credit may require stronger compensating factors.");
+    if (vwfsCreditRating === "good") strengths.push("A rated / Good credit profile.");
+    if (vwfsProofOfSavings === "yes") strengths.push("Proof of savings available.");
+    if (vwfsCreditRating === "average" && vwfsProofOfSavings !== "yes") risks.push("Average credit may require proof of savings or stronger mitigants.");
     if (vwfsCreditRating === "poor") risks.push("Poor credit is unlikely to fit waiver policy.");
+    if (cleanNumber(vwfsAbnYears) < 2 && vwfsAbnContinuity === "yes") strengths.push("ABN continuity selected for short ABN history.");
 
     if (calc.lvr > 100) recommendations.push(`Reduce LVR to 100% or below. Current LVR is ${calc.lvr.toFixed(2)}%.`);
     if (calc.balloonPercent > 60) recommendations.push(`Review balloon. Current balloon is ${calc.balloonPercent.toFixed(2)}%.`);
@@ -493,8 +624,8 @@ export default function App() {
     };
   }, [
     calc, vwfsEntityType, vwfsLoanPurpose, vwfsAbnYears, vwfsGstYears, vwfsAssetBacked,
-    vwfsCreditRating, vwfsCreditFileYears, vwfsVehicleType, vwfsDealerChannel,
-    vwfsReplacementDeal, vwfsRepaymentIncrease, vwfsStartupBusiness
+    vwfsCreditRating, vwfsProofOfSavings, vwfsCreditFileYears, vwfsVehicleType,
+    vwfsReplacementDeal, vwfsRepaymentIncrease, vwfsCurrentLoanARated, vwfsStartupBusiness, vwfsAbnContinuity
   ]);
 
 
@@ -666,12 +797,14 @@ Estimate only. Subject to approval.`;
     vwfsGstYears, setVwfsGstYears,
     vwfsAssetBacked, setVwfsAssetBacked,
     vwfsCreditRating, setVwfsCreditRating,
+    vwfsProofOfSavings, setVwfsProofOfSavings,
     vwfsCreditFileYears, setVwfsCreditFileYears,
     vwfsVehicleType, setVwfsVehicleType,
-    vwfsDealerChannel, setVwfsDealerChannel,
     vwfsReplacementDeal, setVwfsReplacementDeal,
     vwfsRepaymentIncrease, setVwfsRepaymentIncrease,
+    vwfsCurrentLoanARated, setVwfsCurrentLoanARated,
     vwfsStartupBusiness, setVwfsStartupBusiness,
+    vwfsAbnContinuity, setVwfsAbnContinuity,
     vwfsSecondBrain,
     purchasePrice,
     setPurchasePrice,
@@ -710,9 +843,32 @@ Estimate only. Subject to approval.`;
 
   return (
     <>
+      <GlobalPageSwitch {...sharedProps} />
       <MobileLayout {...sharedProps} />
       <DesktopLayout {...sharedProps} />
     </>
+  );
+}
+
+
+function GlobalPageSwitch(props) {
+  return (
+    <div className="global-page-switch">
+      <button
+        type="button"
+        className={props.appPage === "calculator" ? "active" : ""}
+        onClick={() => props.setAppPage("calculator")}
+      >
+        Calculator
+      </button>
+      <button
+        type="button"
+        className={props.appPage === "vwfs" ? "active" : ""}
+        onClick={() => props.setAppPage("vwfs")}
+      >
+        CFS AI
+      </button>
+    </div>
   );
 }
 
@@ -723,7 +879,6 @@ function MobileLayout(props) {
         <header className="mobile-header">
           <Brand />
           <div className="header-controls">
-            <PageToggle {...props} />
             <ModeToggle {...props} />
           </div>
         </header>
@@ -1182,19 +1337,29 @@ function VwfsBrainPanel(props) {
         <small>{brain.bestTier?.label || "No matching tier"}</small>
       </div>
 
+      <div className="deposit-condition">
+        <span>Deposit Condition</span>
+        <b>{props.calc.price ? ((props.calc.cashDeposit / props.calc.price) * 100).toFixed(2) : "0.00"}%</b>
+        <small>20% deposit can be used in lieu of asset backing. For Start Up / New Venture, 10% is sufficient if asset backed.</small>
+      </div>
+
       <div className="vwfs-profile-grid">
-        <SelectField label="Loan Type" value={props.vwfsLoanPurpose} setValue={props.setVwfsLoanPurpose} options={[["commercial","Commercial"],["consumer","Consumer"]]} />
-        <SelectField label="Entity Type" value={props.vwfsEntityType} setValue={props.setVwfsEntityType} options={[["soleTrader","Sole Trader"],["company","Company"],["trust","Trust"],["individual","Individual"]]} />
+        <ButtonGroup label="Loan Type" value={props.vwfsLoanPurpose} setValue={props.setVwfsLoanPurpose} options={[["commercial","Commercial"],["consumer","Consumer"]]} />
+        <ButtonGroup label="Entity Type" value={props.vwfsEntityType} setValue={props.setVwfsEntityType} options={[["soleTrader","Sole Trader"],["company","Company"],["trust","Trust"],["individual","Individual"]]} />
         <Field label="ABN Age" value={props.vwfsAbnYears} setValue={props.setVwfsAbnYears} suffix="yrs" />
+        {cleanNumber(props.vwfsAbnYears) < 2 && (
+          <ButtonGroup label="ABN Continuity" value={props.vwfsAbnContinuity} setValue={props.setVwfsAbnContinuity} options={[["no","No"],["yes","Yes"]]} />
+        )}
         <Field label="GST Age" value={props.vwfsGstYears} setValue={props.setVwfsGstYears} suffix="yrs" />
-        <SelectField label="Asset Backed" value={props.vwfsAssetBacked} setValue={props.setVwfsAssetBacked} options={[["yes","Yes"],["no","No"]]} />
-        <SelectField label="Credit Rating" value={props.vwfsCreditRating} setValue={props.setVwfsCreditRating} options={[["good","Good"],["average","Average"],["poor","Poor"]]} />
+        <ButtonGroup label="Asset Backed" value={props.vwfsAssetBacked} setValue={props.setVwfsAssetBacked} options={[["yes","Yes"],["no","No"]]} />
+        <ButtonGroup label="A Rated Credit" value={props.vwfsCreditRating} setValue={props.setVwfsCreditRating} options={[["good","Good"],["average","Average"],["poor","Poor"]]} />
+        <ButtonGroup label="Proof of Savings" value={props.vwfsProofOfSavings} setValue={props.setVwfsProofOfSavings} options={[["no","No"],["yes","Yes"]]} />
         <Field label="Credit File Age" value={props.vwfsCreditFileYears} setValue={props.setVwfsCreditFileYears} suffix="yrs" />
-        <SelectField label="Vehicle Type" value={props.vwfsVehicleType} setValue={props.setVwfsVehicleType} options={[["branded","VWFS branded"],["whiteLabel","White label"],["all","All vehicles"],["other","Other"]]} />
-        <SelectField label="Channel" value={props.vwfsDealerChannel} setValue={props.setVwfsDealerChannel} options={[["pos","POS dealer"],["broker","Broker"]]} />
-        <SelectField label="Replacement" value={props.vwfsReplacementDeal} setValue={props.setVwfsReplacementDeal} options={[["no","No"],["yes","Yes"]]} />
+        <ButtonGroup label="Vehicle Type" value={props.vwfsVehicleType} setValue={props.setVwfsVehicleType} options={[["branded","VWFS"],["whiteLabel","White Label"],["all","All"],["other","Other"]]} />
+        <ButtonGroup label="Replacement" value={props.vwfsReplacementDeal} setValue={props.setVwfsReplacementDeal} options={[["no","No"],["yes","Yes"]]} />
         <Field label="Repayment Increase" value={props.vwfsRepaymentIncrease} setValue={props.setVwfsRepaymentIncrease} suffix="%" />
-        <SelectField label="Start Up" value={props.vwfsStartupBusiness} setValue={props.setVwfsStartupBusiness} options={[["no","No"],["yes","Yes"]]} />
+        <ButtonGroup label="A Rated Current Loan" value={props.vwfsCurrentLoanARated} setValue={props.setVwfsCurrentLoanARated} options={[["no","No"],["yes","Yes"]]} />
+        <ButtonGroup label="Start Up / New Venture" value={props.vwfsStartupBusiness} setValue={props.setVwfsStartupBusiness} options={[["no","No"],["yes","Yes"]]} />
       </div>
 
       <div className="vwfs-columns">
@@ -1211,6 +1376,27 @@ function VwfsBrainPanel(props) {
             <summary><b>{tier.label}</b><em className={tier.status.toLowerCase().replace(" ","-")}>{tier.status}</em></summary>
             <div>{tier.checks.map((check)=><p key={`${tier.key}-${check.label}`} className={check.pass ? "pass" : "fail"}>{check.pass ? "✓" : "✕"} {check.label}: {check.detail}</p>)}</div>
           </details>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+function ButtonGroup({ label, value, setValue, options }) {
+  return (
+    <div className="button-group-field">
+      <span>{label}</span>
+      <div>
+        {options.map(([optionValue, optionLabel]) => (
+          <button
+            key={optionValue}
+            type="button"
+            className={value === optionValue ? "active" : ""}
+            onClick={() => setValue(optionValue)}
+          >
+            {optionLabel}
+          </button>
         ))}
       </div>
     </div>
