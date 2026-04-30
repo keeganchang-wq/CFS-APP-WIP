@@ -92,6 +92,7 @@ function loadSavedQuotes() {
 export default function App() {
   const [displayMode, setDisplayMode] = useState("auto");
   const [appPage, setAppPage] = useState("calculator");
+  const [cfsAiLender, setCfsAiLender] = useState("VWFS");
 
   const [lenderKey, setLenderKey] = useState("VWFS");
   const [lenderFees, setLenderFees] = useState(LENDERS);
@@ -639,6 +640,8 @@ Estimate only. Subject to approval.`;
     setDisplayMode,
     appPage,
     setAppPage,
+    cfsAiLender,
+    setCfsAiLender,
     lenderKey,
     setLenderKey,
     lenderFees,
@@ -751,8 +754,8 @@ function MobileLayout(props) {
               <p className="disclaimer">Estimate only. Subject to approval, lender policy and final contract terms.</p>
             </>
           ) : (
-            <PagePanel title="VWFS Customer Profile + Waiver Engine" icon={<Wrench />}>
-              <VwfsBrainPanel {...props} />
+            <PagePanel title="CFS AI" icon={<Wrench />}>
+              <CfsAiPage {...props} />
             </PagePanel>
           )}
         </main>
@@ -843,8 +846,8 @@ function DesktopLayout(props) {
         </main>
       ) : (
         <main className="desktop-policy-page">
-          <PagePanel title="VWFS Customer Profile + Waiver Engine" icon={<Wrench />}>
-            <VwfsBrainPanel {...props} />
+          <PagePanel title="CFS AI" icon={<Wrench />}>
+            <CfsAiPage {...props} />
           </PagePanel>
         </main>
       )}
@@ -881,7 +884,7 @@ function PageToggle(props) {
         className={props.appPage === "vwfs" ? "active" : ""}
         onClick={() => props.setAppPage("vwfs")}
       >
-        VWFS Brain
+        CFS AI
       </button>
     </div>
   );
@@ -1104,6 +1107,69 @@ function TargetPanel(props) {
 }
 
 
+
+function CfsAiPage(props) {
+  const lenderOptions = Object.entries(props.lenderFees).map(([key, lender]) => [key, lender.name]);
+  const activeLenderName = props.lenderFees[props.cfsAiLender]?.name || "VWFS";
+
+  return (
+    <div className="cfs-ai-page">
+      <div className="cfs-ai-top">
+        <div>
+          <span>CFS AI Lender Engine</span>
+          <b>{activeLenderName}</b>
+          <small>VWFS logic is live. Other lender policy engines are placeholders ready for policy rules.</small>
+        </div>
+
+        <label className="select-field cfs-ai-lender-select">
+          <span>Lender Policy</span>
+          <select value={props.cfsAiLender} onChange={(event) => props.setCfsAiLender(event.target.value)}>
+            {lenderOptions.map(([key, name]) => (
+              <option value={key} key={key}>{name}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {props.cfsAiLender === "VWFS" ? (
+        <VwfsBrainPanel {...props} />
+      ) : (
+        <LenderPlaceholder lenderName={activeLenderName} />
+      )}
+    </div>
+  );
+}
+
+function LenderPlaceholder({ lenderName }) {
+  return (
+    <div className="lender-placeholder">
+      <div className="placeholder-status">
+        <span>Policy Engine Status</span>
+        <b>{lenderName}</b>
+        <small>Placeholder only — upload the lending policy and waiver guide to activate this lender’s decision logic.</small>
+      </div>
+
+      <div className="placeholder-grid">
+        <div>
+          <span>Coming Logic</span>
+          <p>Low doc / full doc pathway</p>
+          <p>ABN / GST / trading history</p>
+          <p>LVR and balloon caps</p>
+          <p>Credit strength rules</p>
+        </div>
+        <div>
+          <span>Future Output</span>
+          <p>Eligible / Conditional / Not eligible</p>
+          <p>Deal strengths and risks</p>
+          <p>Finance manager notes</p>
+          <p>Required mitigants / waivers</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function VwfsBrainPanel(props) {
   const brain = props.vwfsSecondBrain;
   const decisionClass = brain.decision.toLowerCase().replace(" ", "-");
@@ -1169,7 +1235,7 @@ function ActionSheet(props) {
     client: "Client Profile",
     quotes: "Saved Quotes",
     target: "Target Repayment",
-    vwfs: "VWFS Second Brain",
+    vwfs: "CFS AI",
     structure: "Deal Structuring",
     saved: "Saved"
   };
@@ -1202,7 +1268,7 @@ function ActionSheet(props) {
 
         {props.activeSheet === "quotes" && <SavedQuotes {...props} />}
         {props.activeSheet === "target" && <TargetPanel {...props} />}
-        {props.activeSheet === "vwfs" && <VwfsBrainPanel {...props} />}
+        {props.activeSheet === "vwfs" && <CfsAiPage {...props} />}
 
         {props.activeSheet === "structure" && (
           <div className="flags">

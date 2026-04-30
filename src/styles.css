@@ -1010,3 +1010,117 @@ button {
     padding: 6px 8px;
   }
 }
+
+
+/* CFS AI page refinements */
+.desktop-header {
+  grid-template-columns: auto auto auto minmax(260px, 1fr) !important;
+}
+
+.desktop-header .page-toggle {
+  justify-self: start;
+}
+
+.desktop-header .mode-toggle {
+  justify-self: start;
+}
+
+.header-controls {
+  min-width: 0;
+}
+
+.cfs-ai-page {
+  display: grid;
+  gap: 14px;
+}
+
+.cfs-ai-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
+  gap: 12px;
+  align-items: end;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.035);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.cfs-ai-top > div > span,
+.placeholder-status span,
+.placeholder-grid span {
+  display: block;
+  color: rgba(255,255,255,.45);
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.cfs-ai-top > div > b,
+.placeholder-status b {
+  display: block;
+  margin-top: 5px;
+  color: #41bf28;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.cfs-ai-top > div > small,
+.placeholder-status small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cfs-ai-lender-select {
+  margin: 0;
+}
+
+.lender-placeholder {
+  display: grid;
+  gap: 12px;
+}
+
+.placeholder-status {
+  border: 1px solid rgba(255,180,0,.35);
+  background: rgba(255,180,0,.07);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.placeholder-status b {
+  color: rgba(255,210,120,.95);
+}
+
+.placeholder-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.placeholder-grid > div {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.035);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.placeholder-grid p {
+  margin: 8px 0 0;
+  color: rgba(255,255,255,.68);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+@media (max-width: 1100px) {
+  .desktop-header {
+    grid-template-columns: 1fr !important;
+  }
+
+  .cfs-ai-top,
+  .placeholder-grid {
+    grid-template-columns: 1fr;
+  }
+}
