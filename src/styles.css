@@ -1335,3 +1335,74 @@ button {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+/* CFS AI all lender engines + mobile cleanup */
+.cfs-ai-top.compact {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.cfs-ai-top.compact > div > small {
+  max-width: 100%;
+}
+
+@media (min-width: 860px) {
+  .cfs-ai-top.compact {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+    align-items: end;
+  }
+}
+
+.shared-inputs {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.025);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.cfs-ai-page .select-field select {
+  min-height: 40px;
+}
+
+.cfs-ai-page .vwfs-decision,
+.cfs-ai-page .deposit-condition,
+.cfs-ai-page .balloon-validation,
+.cfs-ai-page .vwfs-list,
+.cfs-ai-page .vwfs-tier-list {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .cfs-ai-top {
+    padding: 10px;
+  }
+
+  .cfs-ai-top > div > b {
+    font-size: 18px;
+  }
+
+  .cfs-ai-top > div > small {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .cfs-ai-lender-select select {
+    width: 100%;
+  }
+
+  .button-group-field > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .button-group-field button {
+    min-width: 0;
+    padding: 8px 7px;
+  }
+
+  .vwfs-tier-list summary {
+    align-items: flex-start;
+  }
+}

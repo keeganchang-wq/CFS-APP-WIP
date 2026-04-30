@@ -215,10 +215,12 @@ export default function App() {
   const [vwfsAssetBacked, setVwfsAssetBacked] = useState("yes");
   const [vwfsCreditRating, setVwfsCreditRating] = useState("good");
   const [vwfsProofOfSavings, setVwfsProofOfSavings] = useState("no");
+  const [cfsBureauScore, setCfsBureauScore] = useState("700");
   const [vwfsCreditFileYears, setVwfsCreditFileYears] = useState("2");
   const [vwfsVehicleType, setVwfsVehicleType] = useState("branded");
   const [vwfsReplacementDeal, setVwfsReplacementDeal] = useState("no");
   const [vwfsRepaymentIncrease, setVwfsRepaymentIncrease] = useState("0");
+  const [cfsCurrentRepayment, setCfsCurrentRepayment] = useState("0");
   const [vwfsCurrentLoanARated, setVwfsCurrentLoanARated] = useState("no");
   const [vwfsStartupBusiness, setVwfsStartupBusiness] = useState("no");
   const [vwfsAbnContinuity, setVwfsAbnContinuity] = useState("no");
@@ -680,7 +682,7 @@ export default function App() {
   }, [
     calc, vwfsEntityType, vwfsLoanPurpose, vwfsAbnYears, vwfsGstYears, vwfsAssetBacked,
     vwfsCreditRating, vwfsProofOfSavings, vwfsCreditFileYears, vwfsVehicleType,
-    vwfsReplacementDeal, vwfsRepaymentIncrease, vwfsCurrentLoanARated, vwfsStartupBusiness, vwfsAbnContinuity, balloonAssessment
+    vwfsReplacementDeal, vwfsRepaymentIncrease, vwfsCurrentLoanARated, vwfsStartupBusiness, vwfsAbnContinuity
   ]);
 
 
@@ -853,10 +855,12 @@ Estimate only. Subject to approval.`;
     vwfsAssetBacked, setVwfsAssetBacked,
     vwfsCreditRating, setVwfsCreditRating,
     vwfsProofOfSavings, setVwfsProofOfSavings,
+    cfsBureauScore, setCfsBureauScore,
     vwfsCreditFileYears, setVwfsCreditFileYears,
     vwfsVehicleType, setVwfsVehicleType,
     vwfsReplacementDeal, setVwfsReplacementDeal,
     vwfsRepaymentIncrease, setVwfsRepaymentIncrease,
+    cfsCurrentRepayment, setCfsCurrentRepayment,
     vwfsCurrentLoanARated, setVwfsCurrentLoanARated,
     vwfsStartupBusiness, setVwfsStartupBusiness,
     vwfsAbnContinuity, setVwfsAbnContinuity,
@@ -876,7 +880,7 @@ Estimate only. Subject to approval.`;
     balloonAmount,
     setBalloonAmount,
     calc,
-    balloonAssessment,
+    
     updateLenderFee,
     quoteText,
     saveQuote,
@@ -1232,8 +1236,6 @@ function RepaymentPanel(props) {
             ["Fortnightly", money(props.calc.fortnightly)],
             ["Total payable", money(props.calc.totalPayable)]
           ]} />
-
-          <BalloonValidationCard assessment={props.balloonAssessment} calc={props.calc} />
         </>
       )}
     </Panel>
@@ -1321,17 +1323,18 @@ function TargetPanel(props) {
 
 
 
+
 function CfsAiPage(props) {
   const lenderOptions = Object.entries(props.lenderFees).map(([key, lender]) => [key, lender.name]);
   const activeLenderName = props.lenderFees[props.cfsAiLender]?.name || "VWFS";
 
   return (
     <div className="cfs-ai-page">
-      <div className="cfs-ai-top">
+      <div className="cfs-ai-top compact">
         <div>
-          <span>CFS AI Lender Engine</span>
+          <span>CFS AI</span>
           <b>{activeLenderName}</b>
-          <small>VWFS logic is live. Other lender policy engines are placeholders ready for policy rules.</small>
+          <small>{props.cfsAiLender === "VWFS" ? "VWFS waiver logic is live." : "Lender policy engine active."}</small>
         </div>
 
         <label className="select-field cfs-ai-lender-select">
@@ -1344,11 +1347,339 @@ function CfsAiPage(props) {
         </label>
       </div>
 
-      {props.cfsAiLender === "VWFS" ? (
-        <VwfsBrainPanel {...props} />
-      ) : (
+      {props.cfsAiLender === "VWFS" && <VwfsBrainPanel {...props} />}
+      {props.cfsAiLender === "PEPPER" && <PepperEnginePanel {...props} />}
+      {props.cfsAiLender === "ANGLE_COMM" && <AngleCommercialEnginePanel {...props} />}
+      {props.cfsAiLender === "ALLIED" && <AlliedEnginePanel {...props} />}
+      {props.cfsAiLender === "TAURUS" && <TaurusEnginePanel {...props} />}
+      {!["VWFS", "PEPPER", "ANGLE_COMM", "ALLIED", "TAURUS"].includes(props.cfsAiLender) && (
         <LenderPlaceholder lenderName={activeLenderName} />
       )}
+    </div>
+  );
+}
+
+function CfsSharedInputs(props) {
+  return (
+    <div className="vwfs-profile-grid shared-inputs">
+      <Field label="ABN Age" value={props.vwfsAbnYears} setValue={props.setVwfsAbnYears} suffix="yrs" />
+      {cleanNumber(props.vwfsAbnYears) < 2 && (
+        <ButtonGroup label="ABN Continuity" value={props.vwfsAbnContinuity} setValue={props.setVwfsAbnContinuity} options={[["no","No"],["yes","Yes"]]} />
+      )}
+      <Field label="GST Age" value={props.vwfsGstYears} setValue={props.setVwfsGstYears} suffix="yrs" />
+      <ButtonGroup label="Asset Backed" value={props.vwfsAssetBacked} setValue={props.setVwfsAssetBacked} options={[["yes","Yes"],["no","No"]]} />
+      <ButtonGroup label="A Rated / Credit" value={props.vwfsCreditRating} setValue={props.setVwfsCreditRating} options={[["good","Good"],["average","Average"],["poor","Poor"]]} />
+      <ButtonGroup label="Proof of Savings" value={props.vwfsProofOfSavings} setValue={props.setVwfsProofOfSavings} options={[["no","No"],["yes","Yes"]]} />
+      <Field label="Bureau Score" value={props.cfsBureauScore} setValue={props.setCfsBureauScore} />
+      <ButtonGroup label="Replacement" value={props.vwfsReplacementDeal} setValue={props.setVwfsReplacementDeal} options={[["no","No"],["yes","Yes"]]} />
+      <Field label="Current Repayment" value={props.cfsCurrentRepayment} setValue={props.setCfsCurrentRepayment} prefix="$" />
+      <Field label="Repayment Increase" value={props.vwfsRepaymentIncrease} setValue={props.setVwfsRepaymentIncrease} suffix="%" />
+      <ButtonGroup label="A Rated Current Loan" value={props.vwfsCurrentLoanARated} setValue={props.setVwfsCurrentLoanARated} options={[["no","No"],["yes","Yes"]]} />
+    </div>
+  );
+}
+
+function getEquityPercent(calc) {
+  return calc.price ? (calc.equity / calc.price) * 100 : 0;
+}
+
+function getRepaymentIncreasePercent(props) {
+  const current = cleanNumber(props.cfsCurrentRepayment);
+  if (current > 0) return ((props.calc.monthly - current) / current) * 100;
+  return cleanNumber(props.vwfsRepaymentIncrease);
+}
+
+function evaluateChecks(checks) {
+  const failed = checks.filter((check) => !check.pass && check.severity !== "warning");
+  const warnings = checks.filter((check) => !check.pass && check.severity === "warning");
+  return failed.length === 0 ? (warnings.length ? "Conditional" : "Eligible") : (failed.length <= 2 ? "Conditional" : "Not Eligible");
+}
+
+function PolicyResultCard({ title, status, subtitle }) {
+  const decisionClass = status.toLowerCase().replace(" ", "-");
+  return (
+    <div className={`vwfs-decision ${decisionClass}`}>
+      <span>{title}</span>
+      <b>{status}</b>
+      <small>{subtitle}</small>
+    </div>
+  );
+}
+
+function CheckList({ checks }) {
+  return (
+    <div className="vwfs-tier-list">
+      <span>Policy Checks</span>
+      {checks.map((check) => (
+        <p key={check.label} className={check.pass ? "pass" : "fail"}>
+          {check.pass ? "✓" : "✕"} {check.label}: {check.detail}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function EngineNotes({ strengths = [], risks = [], recommendations = [] }) {
+  return (
+    <>
+      <div className="vwfs-columns">
+        <div className="vwfs-list"><span>Strengths</span>{strengths.length ? strengths.map((item)=><p key={item}>✓ {item}</p>) : <p>No major strengths captured yet.</p>}</div>
+        <div className="vwfs-list"><span>Risks</span>{risks.length ? risks.map((item)=><p key={item}>⚠ {item}</p>) : <p>No major risks captured.</p>}</div>
+      </div>
+      <div className="vwfs-list recommendations"><span>Finance Manager Notes</span>{recommendations.map((item)=><p key={item}>→ {item}</p>)}</div>
+    </>
+  );
+}
+
+function DepositConditionCard({ calc }) {
+  const equityPercent = getEquityPercent(calc);
+  return (
+    <div className="deposit-condition">
+      <span>Deposit / Equity Condition</span>
+      <b>{equityPercent.toFixed(2)}%</b>
+      <small>Calculated from total equity: cash deposit + trade allowance - existing payout.</small>
+      <div className="deposit-breakdown">
+        <p><span>Cash Deposit</span><b>{money(calc.cashDeposit)}</b></p>
+        <p><span>Trade Equity</span><b>{money(calc.trade - calc.payout)}</b></p>
+        <p><span>Total Equity</span><b>{money(calc.equity)}</b></p>
+      </div>
+    </div>
+  );
+}
+
+function PepperEnginePanel(props) {
+  const equityPercent = getEquityPercent(props.calc);
+  const abn = cleanNumber(props.vwfsAbnYears);
+  const gst = cleanNumber(props.vwfsGstYears);
+  const assetBacked = props.vwfsAssetBacked === "yes";
+  const goodCredit = props.vwfsCreditRating === "good";
+  const abnContinuity = props.vwfsAbnContinuity === "yes";
+  const naf = props.calc.amountFinanced;
+  const lvr = props.calc.lvr;
+
+  const tiers = [
+    { label: "Tier A", cap: 300000, exposure: 499000, lvr: 180, checks: [
+      ["ABN / continuity", abn >= 3 || abnContinuity, "3 years ABN or business continuity required."],
+      ["GST", gst >= 2, "2 years GST required."],
+      ["Asset position", assetBacked, "Real estate in applicant/guarantor name required."],
+      ["Credit", goodCredit, "Established very good credit file required."],
+      ["NAF", naf <= 300000, "Fast track primary asset NAF up to $300k."]
+    ]},
+    { label: "Tier B", cap: 150000, exposure: 200000, lvr: 180, checks: [
+      ["ABN / continuity", abn >= 2 || abnContinuity, "2 years ABN or continuity required."],
+      ["GST", gst >= 1, "Minimum 1 year GST required."],
+      ["Asset or 20% deposit", assetBacked || equityPercent >= 20, "Real estate or 20% deposit required."],
+      ["Credit", goodCredit || props.vwfsCreditRating === "average", "Good checkable credit history required."],
+      ["NAF", naf <= 150000, "Fast track primary asset NAF up to $150k."]
+    ]},
+    { label: "Tier C", cap: 40000, exposure: 80000, lvr: 120, checks: [
+      ["ABN / continuity", abn >= 2 || abnContinuity, "2 years ABN or continuity required."],
+      ["Deposit", equityPercent >= 10, "Minimum 10% deposit required."],
+      ["Credit", goodCredit || props.vwfsCreditRating === "average", "Good checkable credit required."],
+      ["NAF", naf <= 40000, "Tier C max fast track NAF is $40k."]
+    ]}
+  ].map((tier) => {
+    const checks = tier.checks.map(([label, pass, detail]) => ({ label, pass, detail }));
+    checks.push({ label: "LVR", pass: lvr <= tier.lvr, detail: `LVR ${lvr.toFixed(2)}%. Max ${tier.lvr}%.` });
+    const status = evaluateChecks(checks);
+    return { ...tier, checks, status, score: checks.filter(c=>c.pass).length };
+  });
+
+  const best = tiers.slice().sort((a,b) => (a.status==="Eligible"?2:a.status==="Conditional"?1:0) - (b.status==="Eligible"?2:b.status==="Conditional"?1:0) || b.score-a.score).reverse()[0];
+  const recommendations = best.checks.filter(c=>!c.pass).map(c=>c.detail);
+  if (!recommendations.length) recommendations.push(`Customer appears to fit Pepper ${best.label}.`);
+
+  return (
+    <div className="vwfs-brain">
+      <PolicyResultCard title="Pepper Waiver Result" status={best.status} subtitle={`${best.label} — ${best.cap ? money(best.cap) : ""} fast track guide`} />
+      <DepositConditionCard calc={props.calc} />
+      <CfsSharedInputs {...props} />
+      <EngineNotes strengths={[`Best tier: ${best.label}`, `Equity position: ${equityPercent.toFixed(2)}%`]} risks={best.checks.filter(c=>!c.pass).map(c=>c.label)} recommendations={recommendations} />
+      <div className="vwfs-tier-list">
+        <span>Tier Checks</span>
+        {tiers.map((tier)=>(
+          <details key={tier.label}>
+            <summary><b>{tier.label}</b><em className={tier.status.toLowerCase().replace(" ","-")}>{tier.status}</em></summary>
+            <div>{tier.checks.map(c=><p key={c.label} className={c.pass ? "pass" : "fail"}>{c.pass ? "✓" : "✕"} {c.label}: {c.detail}</p>)}</div>
+          </details>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AngleCommercialEnginePanel(props) {
+  const equityPercent = getEquityPercent(props.calc);
+  const abn = cleanNumber(props.vwfsAbnYears);
+  const gst = cleanNumber(props.vwfsGstYears);
+  const assetBacked = props.vwfsAssetBacked === "yes";
+  const goodCredit = props.vwfsCreditRating === "good";
+  const repaymentIncrease = getRepaymentIncreasePercent(props);
+  const naf = props.calc.amountFinanced;
+  const lvr = props.calc.lvr;
+
+  const pathways = [
+    { label:"ABN 3-12 months", minAbn:0.25, maxNaf:75000, maxLvr:100, exposure:75000, needsAssetOr20:true, needsReplacement:false },
+    { label:"ABN 12-24 months", minAbn:1, maxNaf:150000, maxLvr:110, exposure:100000, needsAssetOr20:true, needsReplacement:false },
+    { label:"ABN 24+ <$150k", minAbn:2, maxNaf:150000, maxLvr:120, exposure:150000, needsAssetOr20:false, needsReplacement:false },
+    { label:"ABN 24+ Replacement <$200k", minAbn:2, maxNaf:200000, maxLvr:120, exposure:200000, needsAssetOr20:false, needsReplacement:true }
+  ].map((p) => {
+    const checks = [
+      { label:"NAF", pass: naf <= p.maxNaf, detail:`NAF ${money(naf)}. Max ${money(p.maxNaf)}.` },
+      { label:"ABN", pass: abn >= p.minAbn, detail:`ABN ${abn} years. Required ${p.minAbn}+ years.` },
+      { label:"GST", pass: gst > 0, detail:"GST registration required. Non-GST can be referred but caps may apply." },
+      { label:"Credit", pass: goodCredit || props.vwfsCreditRating === "average", detail:"Clear established credit file required." },
+      { label:"LVR", pass: lvr <= p.maxLvr, detail:`LVR ${lvr.toFixed(2)}%. Max ${p.maxLvr}%.` },
+    ];
+    if (p.needsAssetOr20) checks.push({ label:"Asset backed or 20% deposit", pass: assetBacked || equityPercent >= 20, detail:"Asset backed or 20% cash/trade equity required." });
+    if (p.needsReplacement) {
+      checks.push({ label:"Replacement", pass: props.vwfsReplacementDeal === "yes", detail:"Replacement required only for the $200k pathway." });
+      checks.push({ label:"Repayment ratio", pass: repaymentIncrease <= 25, detail:`Repayment increase ${repaymentIncrease.toFixed(2)}%. Must be within 125% ratio / 25% increase.` });
+    }
+    const status = evaluateChecks(checks);
+    return { ...p, checks, status, score: checks.filter(c=>c.pass).length };
+  });
+
+  const best = pathways.slice().sort((a,b) => (a.status==="Eligible"?2:a.status==="Conditional"?1:0) - (b.status==="Eligible"?2:b.status==="Conditional"?1:0) || b.score-a.score).reverse()[0];
+  const recommendations = best.checks.filter(c=>!c.pass).map(c=>c.detail);
+  if (!recommendations.length) recommendations.push(`Application appears to fit Angle Commercial ${best.label}.`);
+
+  return (
+    <div className="vwfs-brain">
+      <PolicyResultCard title="Angle Commercial Fast Track" status={best.status} subtitle={best.label} />
+      <DepositConditionCard calc={props.calc} />
+      <BalloonValidationCard assessment={props.balloonAssessment} calc={props.calc} />
+      <CfsSharedInputs {...props} />
+      <EngineNotes strengths={[`Best pathway: ${best.label}`, `Equity: ${equityPercent.toFixed(2)}%`]} risks={best.checks.filter(c=>!c.pass).map(c=>c.label)} recommendations={recommendations} />
+      <div className="vwfs-tier-list">
+        <span>Angle Pathway Checks</span>
+        {pathways.map((p)=>(
+          <details key={p.label}>
+            <summary><b>{p.label}</b><em className={p.status.toLowerCase().replace(" ","-")}>{p.status}</em></summary>
+            <div>{p.checks.map(c=><p key={c.label} className={c.pass ? "pass" : "fail"}>{c.pass ? "✓" : "✕"} {c.label}: {c.detail}</p>)}</div>
+          </details>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+function AlliedEnginePanel(props) {
+  const equityPercent = getEquityPercent(props.calc);
+  const abnMonths = cleanNumber(props.vwfsAbnYears) * 12;
+  const gstRegistered = cleanNumber(props.vwfsGstYears) > 0;
+  const assetBacked = props.vwfsAssetBacked === "yes";
+  const aRated = props.vwfsCreditRating === "good" || props.vwfsCurrentLoanARated === "yes";
+  const naf = props.calc.amountFinanced;
+  const lvr = props.calc.lvr;
+  const replacement = props.vwfsReplacementDeal === "yes";
+  const repaymentIncrease = getRepaymentIncreasePercent(props);
+
+  const products = [
+    { label:"Asset Backed New Venture $0-$50k", asset:true, maxNaf:50000, abnMonths:3, gstRequired:true, maxLvr:100, aRated:false, replacement:false },
+    { label:"Asset Backed Non-GST $0-$50k", asset:true, maxNaf:50000, abnMonths:12, gstRequired:false, maxLvr:100, aRated:false, replacement:false, nonGst:true },
+    { label:"Asset Backed Financial Waiver $0-$150k", asset:true, maxNaf:150000, abnMonths:12, gstRequired:true, maxLvr:130, aRated:false, replacement:false },
+    { label:"Asset Backed Replacement $0-$150k", asset:true, maxNaf:150000, abnMonths:12, gstRequired:true, maxLvr:130, aRated:true, replacement:true },
+    { label:"Asset Backed Financial Waiver $150k-$200k", asset:true, minNaf:150000, maxNaf:200000, abnMonths:12, gstRequired:true, maxLvr:130, aRated:true, replacement:false },
+    { label:"Non-Asset Backed Financial Waiver $0-$100k", asset:false, maxNaf:100000, abnMonths:24, gstRequired:true, maxLvr:100, aRated:true, replacement:false, deposit:10 }
+  ].map((p) => {
+    const checks = [
+      { label:"Asset position", pass: p.asset ? assetBacked : !assetBacked, detail: p.asset ? "Asset backed required." : "Non-asset backed pathway." },
+      { label:"NAF", pass: naf <= p.maxNaf && (p.minNaf ? naf >= p.minNaf : true), detail:`NAF ${money(naf)}. Range ${p.minNaf ? money(p.minNaf)+" - " : ""}${money(p.maxNaf)}.` },
+      { label:"ABN / Directorship", pass: abnMonths >= p.abnMonths, detail:`ABN/directorship ${abnMonths.toFixed(0)} months. Required ${p.abnMonths}+ months.` },
+      { label:"GST", pass: p.nonGst ? !gstRegistered : (p.gstRequired ? gstRegistered : true), detail: p.nonGst ? "Non-GST pathway." : "GST required for this pathway." },
+      { label:"LVR", pass: lvr <= p.maxLvr, detail:`LVR ${lvr.toFixed(2)}%. Max ${p.maxLvr}%.` }
+    ];
+    if (p.aRated) checks.push({ label:"A Rated Reference", pass: aRated, detail:"A rated reference required." });
+    if (p.replacement) {
+      checks.push({ label:"Replacement", pass: replacement, detail:"Replacement pathway requires replacement deal." });
+      checks.push({ label:"Repayment increase", pass: repaymentIncrease <= 50, detail:`Repayment increase ${repaymentIncrease.toFixed(2)}%. Max 50%.` });
+    }
+    if (p.deposit) checks.push({ label:"Deposit", pass: equityPercent >= p.deposit, detail:`Equity ${equityPercent.toFixed(2)}%. Required ${p.deposit}%.` });
+    const status = evaluateChecks(checks);
+    return { ...p, checks, status, score: checks.filter(c=>c.pass).length };
+  });
+
+  const best = products.slice().sort((a,b) => (a.status==="Eligible"?2:a.status==="Conditional"?1:0) - (b.status==="Eligible"?2:b.status==="Conditional"?1:0) || b.score-a.score).reverse()[0];
+  const recommendations = best.checks.filter(c=>!c.pass).map(c=>c.detail);
+  if (!recommendations.length) recommendations.push(`Application appears to fit Allied ${best.label}.`);
+  return (
+    <div className="vwfs-brain">
+      <PolicyResultCard title="Allied Waiver Result" status={best.status} subtitle={best.label} />
+      <DepositConditionCard calc={props.calc} />
+      <CfsSharedInputs {...props} />
+      <EngineNotes strengths={[`Best pathway: ${best.label}`, `Asset backed: ${assetBacked ? "Yes" : "No"}`]} risks={best.checks.filter(c=>!c.pass).map(c=>c.label)} recommendations={recommendations} />
+      <div className="vwfs-tier-list">
+        <span>Allied Pathway Checks</span>
+        {products.map((p)=>(
+          <details key={p.label}>
+            <summary><b>{p.label}</b><em className={p.status.toLowerCase().replace(" ","-")}>{p.status}</em></summary>
+            <div>{p.checks.map(c=><p key={c.label} className={c.pass ? "pass" : "fail"}>{c.pass ? "✓" : "✕"} {c.label}: {c.detail}</p>)}</div>
+          </details>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TaurusEnginePanel(props) {
+  const equityPercent = getEquityPercent(props.calc);
+  const propertyOwner = props.vwfsAssetBacked === "yes";
+  const bureau = cleanNumber(props.cfsBureauScore);
+  const abn = cleanNumber(props.vwfsAbnYears);
+  const gst = cleanNumber(props.vwfsGstYears);
+  const naf = props.calc.amountFinanced;
+  const lvr = props.calc.lvr;
+  const term = props.calc.term;
+  const replacement = props.vwfsReplacementDeal === "yes";
+  const repaymentIncrease = getRepaymentIncreasePercent(props);
+
+  const products = [
+    { label:"Low Doc Property Owner", maxNaf:125000, exposure:125000, maxTerm:60, maxLvr:120, abn:2, gst:1, deposit:0, score:650, property:true, replacement:false },
+    { label:"Low Doc Non-Property Owner", maxNaf:75000, exposure:75000, maxTerm:60, maxLvr:100, abn:2, gst:2, deposit:20, score:750, property:false, replacement:false },
+    { label:"Replacement", maxNaf:150000, exposure:500000, maxTerm:84, maxLvr:140, abn:1, gst:1, deposit:0, score:525, property:null, replacement:true },
+    { label:"Fast Track", maxNaf:150000, exposure:500000, maxTerm:84, maxLvr:140, abn:1, gst:1, deposit:0, score:525, property:null, bankStatements:true },
+    { label:"Financials", maxNaf:200000, exposure:500000, maxTerm:84, maxLvr:150, abn:1, gst:0.01, deposit:0, score:525, property:null, financials:true }
+  ].map((p) => {
+    const checks = [
+      { label:"NAF", pass: naf >= 10000 && naf <= p.maxNaf, detail:`NAF ${money(naf)}. Min $10k, max ${money(p.maxNaf)}.` },
+      { label:"Term", pass: term <= p.maxTerm, detail:`Term ${term} months. Max ${p.maxTerm}.` },
+      { label:"LVR", pass: lvr <= p.maxLvr, detail:`LVR ${lvr.toFixed(2)}%. Max ${p.maxLvr}%.` },
+      { label:"ABN", pass: abn >= p.abn, detail:`ABN ${abn} years. Required ${p.abn}+ years.` },
+      { label:"GST", pass: gst >= p.gst, detail:`GST ${gst} years. Required ${p.gst}+ years.` },
+      { label:"Bureau Score", pass: bureau > p.score, detail:`Score ${bureau}. Required >${p.score}.` }
+    ];
+    if (p.property === true) checks.push({ label:"Property owner", pass: propertyOwner, detail:"Property owner required." });
+    if (p.property === false) checks.push({ label:"Non-property owner", pass: !propertyOwner, detail:"Non-property owner low doc product." });
+    if (p.deposit) checks.push({ label:"Deposit", pass: equityPercent >= p.deposit, detail:`Equity ${equityPercent.toFixed(2)}%. Required ${p.deposit}%.` });
+    if (p.replacement) {
+      checks.push({ label:"Replacement", pass: replacement, detail:"Replacement product requires replacement finance." });
+      checks.push({ label:"Repayment increase", pass: repaymentIncrease <= 30, detail:`Repayment increase ${repaymentIncrease.toFixed(2)}%. Max 30%.` });
+    }
+    const status = evaluateChecks(checks);
+    return { ...p, checks, status, scoreValue: checks.filter(c=>c.pass).length };
+  });
+
+  const best = products.slice().sort((a,b) => (a.status==="Eligible"?2:a.status==="Conditional"?1:0) - (b.status==="Eligible"?2:b.status==="Conditional"?1:0) || b.scoreValue-a.scoreValue).reverse()[0];
+  const recommendations = best.checks.filter(c=>!c.pass).map(c=>c.detail);
+  if (!recommendations.length) recommendations.push(`Recommended Taurus product: ${best.label}.`);
+
+  return (
+    <div className="vwfs-brain">
+      <PolicyResultCard title="Taurus Product Fit" status={best.status} subtitle={`Recommended Product: ${best.label}`} />
+      <DepositConditionCard calc={props.calc} />
+      <CfsSharedInputs {...props} />
+      <EngineNotes strengths={[`Auto-selected product: ${best.label}`, `Bureau score: ${bureau}`]} risks={best.checks.filter(c=>!c.pass).map(c=>c.label)} recommendations={recommendations} />
+      <div className="vwfs-tier-list">
+        <span>Taurus Product Checks</span>
+        {products.map((p)=>(
+          <details key={p.label}>
+            <summary><b>{p.label}</b><em className={p.status.toLowerCase().replace(" ","-")}>{p.status}</em></summary>
+            <div>{p.checks.map(c=><p key={c.label} className={c.pass ? "pass" : "fail"}>{c.pass ? "✓" : "✕"} {c.label}: {c.detail}</p>)}</div>
+          </details>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1361,28 +1692,9 @@ function LenderPlaceholder({ lenderName }) {
         <b>{lenderName}</b>
         <small>Placeholder only — upload the lending policy and waiver guide to activate this lender’s decision logic.</small>
       </div>
-
-      <div className="placeholder-grid">
-        <div>
-          <span>Coming Logic</span>
-          <p>Low doc / full doc pathway</p>
-          <p>ABN / GST / trading history</p>
-          <p>LVR and balloon caps</p>
-          <p>Credit strength rules</p>
-        </div>
-        <div>
-          <span>Future Output</span>
-          <p>Eligible / Conditional / Not eligible</p>
-          <p>Deal strengths and risks</p>
-          <p>Finance manager notes</p>
-          <p>Required mitigants / waivers</p>
-        </div>
-      </div>
     </div>
   );
 }
-
-
 
 function BalloonValidationCard({ assessment, calc }) {
   if (!assessment) return null;
@@ -1390,7 +1702,7 @@ function BalloonValidationCard({ assessment, calc }) {
   return (
     <div className={`balloon-validation ${assessment.severity}`}>
       <div>
-        <span>Balloon Validation</span>
+        <span>Angle Balloon Validation</span>
         <b>{assessment.status}</b>
         <small>{assessment.message}</small>
       </div>
