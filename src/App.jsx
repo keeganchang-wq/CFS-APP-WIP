@@ -110,6 +110,52 @@ const LOCK_LABELS = {
   deposit: "Deposit"
 };
 
+
+const CAVALO_BALLOON_RULES = [
+  { min: 0, max: 12, current: 70, guide: 70 },
+  { min: 13, max: 24, current: 60, guide: 60 },
+  { min: 25, max: 36, current: 50, guide: 50 },
+  { min: 37, max: 48, current: 40, guide: 45 },
+  { min: 49, max: 60, current: 30, guide: 40 },
+  { min: 61, max: 84, current: 0, guide: 0 }
+];
+
+function getBalloonRule(termMonths) {
+  const months = cleanNumber(termMonths);
+  return CAVALO_BALLOON_RULES.find((rule) => months >= rule.min && months <= rule.max) || CAVALO_BALLOON_RULES[CAVALO_BALLOON_RULES.length - 1];
+}
+
+function assessBalloon({ term, balloonPercent }) {
+  const rule = getBalloonRule(term);
+  const percent = Number.isFinite(balloonPercent) ? balloonPercent : 0;
+
+  if (percent <= rule.current) {
+    return {
+      status: "Compliant",
+      severity: "pass",
+      message: `Balloon is within current policy (${rule.current}% max for this term).`,
+      rule
+    };
+  }
+
+  if (percent <= rule.guide) {
+    return {
+      status: "Within Guide",
+      severity: "warning",
+      message: `Balloon is above current policy (${rule.current}%) but within proposed guide (${rule.guide}%).`,
+      rule
+    };
+  }
+
+  return {
+    status: "Outside Policy",
+    severity: "fail",
+    message: `Balloon exceeds guide (${rule.guide}% max for this term).`,
+    rule
+  };
+}
+
+
 const formatCurrency = new Intl.NumberFormat("en-AU", {
   style: "currency",
   currency: "AUD",
@@ -244,6 +290,15 @@ export default function App() {
       balloonPercent: price ? (balloon / price) * 100 : 0
     };
   }, [purchasePrice, deposit, tradeAllowance, existingPayout, interestRate, loanTerm, balloonAmount, lender]);
+
+
+  const balloonAssessment = useMemo(() => {
+    return assessBalloon({
+      term: calc.term,
+      balloonPercent: calc.balloonPercent
+    });
+  }, [calc.term, calc.balloonPercent]);
+
 
   function monthlyFor(overrides = {}) {
     const price = overrides.purchase ?? cleanNumber(purchasePrice);
@@ -484,7 +539,7 @@ export default function App() {
     const req = tier.req;
     const checks = [];
     const amount = calc.amountFinanced;
-    const depositPercent = calc.price ? (calc.cashDeposit / calc.price) * 100 : 0;
+    const depositPercent = calc.price ? (calc.equity / calc.price) * 100 : 0;
     const has20Deposit = depositPercent >= 20;
     const has10Deposit = depositPercent >= 10;
     const assetBacked = vwfsAssetBacked === "yes";
@@ -625,7 +680,7 @@ export default function App() {
   }, [
     calc, vwfsEntityType, vwfsLoanPurpose, vwfsAbnYears, vwfsGstYears, vwfsAssetBacked,
     vwfsCreditRating, vwfsProofOfSavings, vwfsCreditFileYears, vwfsVehicleType,
-    vwfsReplacementDeal, vwfsRepaymentIncrease, vwfsCurrentLoanARated, vwfsStartupBusiness, vwfsAbnContinuity
+    vwfsReplacementDeal, vwfsRepaymentIncrease, vwfsCurrentLoanARated, vwfsStartupBusiness, vwfsAbnContinuity, balloonAssessment
   ]);
 
 
@@ -821,6 +876,7 @@ Estimate only. Subject to approval.`;
     balloonAmount,
     setBalloonAmount,
     calc,
+    balloonAssessment,
     updateLenderFee,
     quoteText,
     saveQuote,
@@ -1176,6 +1232,8 @@ function RepaymentPanel(props) {
             ["Fortnightly", money(props.calc.fortnightly)],
             ["Total payable", money(props.calc.totalPayable)]
           ]} />
+
+          <BalloonValidationCard assessment={props.balloonAssessment} calc={props.calc} />
         </>
       )}
     </Panel>
@@ -1325,6 +1383,28 @@ function LenderPlaceholder({ lenderName }) {
 }
 
 
+
+function BalloonValidationCard({ assessment, calc }) {
+  if (!assessment) return null;
+
+  return (
+    <div className={`balloon-validation ${assessment.severity}`}>
+      <div>
+        <span>Balloon Validation</span>
+        <b>{assessment.status}</b>
+        <small>{assessment.message}</small>
+      </div>
+
+      <div className="balloon-validation-grid">
+        <p><span>Current Balloon</span><b>{calc.balloonPercent.toFixed(2)}%</b></p>
+        <p><span>Term</span><b>{calc.term} months</b></p>
+        <p><span>Current Policy Max</span><b>{assessment.rule.current}%</b></p>
+        <p><span>Guide Max</span><b>{assessment.rule.guide}%</b></p>
+      </div>
+    </div>
+  );
+}
+
 function VwfsBrainPanel(props) {
   const brain = props.vwfsSecondBrain;
   const decisionClass = brain.decision.toLowerCase().replace(" ", "-");
@@ -1339,9 +1419,16 @@ function VwfsBrainPanel(props) {
 
       <div className="deposit-condition">
         <span>Deposit Condition</span>
-        <b>{props.calc.price ? ((props.calc.cashDeposit / props.calc.price) * 100).toFixed(2) : "0.00"}%</b>
-        <small>20% deposit can be used in lieu of asset backing. For Start Up / New Venture, 10% is sufficient if asset backed.</small>
+        <b>{props.calc.price ? ((props.calc.equity / props.calc.price) * 100).toFixed(2) : "0.00"}%</b>
+        <small>Calculated from total equity: cash deposit + trade allowance - existing payout. 20% total equity can be used in lieu of asset backing. For Start Up / New Venture, 10% is sufficient if asset backed.</small>
+        <div className="deposit-breakdown">
+          <p><span>Cash Deposit</span><b>{money(props.calc.cashDeposit)}</b></p>
+          <p><span>Trade Equity</span><b>{money(props.calc.trade - props.calc.payout)}</b></p>
+          <p><span>Total Equity</span><b>{money(props.calc.equity)}</b></p>
+        </div>
       </div>
+
+      <BalloonValidationCard assessment={props.balloonAssessment} calc={props.calc} />
 
       <div className="vwfs-profile-grid">
         <ButtonGroup label="Loan Type" value={props.vwfsLoanPurpose} setValue={props.setVwfsLoanPurpose} options={[["commercial","Commercial"],["consumer","Consumer"]]} />

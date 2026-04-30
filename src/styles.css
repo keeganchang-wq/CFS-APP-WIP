@@ -1237,3 +1237,101 @@ button {
     font-size: 11px;
   }
 }
+
+
+/* Balloon validation */
+.balloon-validation {
+  margin-top: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  border-radius: 10px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.balloon-validation.pass {
+  border-color: rgba(65,191,40,.36);
+  background: rgba(65,191,40,.065);
+}
+
+.balloon-validation.warning {
+  border-color: rgba(255,180,0,.36);
+  background: rgba(255,180,0,.075);
+}
+
+.balloon-validation.fail {
+  border-color: rgba(255,80,80,.36);
+  background: rgba(255,80,80,.075);
+}
+
+.balloon-validation span,
+.deposit-breakdown span {
+  display: block;
+  color: rgba(255,255,255,.45);
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.balloon-validation b {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255,255,255,.92);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.balloon-validation.pass > div:first-child b {
+  color: #41bf28;
+}
+
+.balloon-validation.warning > div:first-child b {
+  color: rgba(255,210,120,.95);
+}
+
+.balloon-validation.fail > div:first-child b {
+  color: rgba(255,115,115,.95);
+}
+
+.balloon-validation small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255,255,255,.62);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.balloon-validation-grid,
+.deposit-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 8px;
+}
+
+.balloon-validation-grid p,
+.deposit-breakdown p {
+  margin: 0;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  background: rgba(0,0,0,.22);
+  padding: 9px;
+}
+
+.balloon-validation-grid p b,
+.deposit-breakdown p b {
+  font-size: 12px;
+}
+
+.deposit-breakdown {
+  margin-top: 10px;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+}
+
+@media (max-width: 800px) {
+  .balloon-validation-grid,
+  .deposit-breakdown {
+    grid-template-columns: 1fr 1fr;
+  }
+}
